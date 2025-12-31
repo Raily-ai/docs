@@ -1,0 +1,157 @@
+---
+title: "Create Policy"
+api: "POST /v1/policies"
+description: "Create a new access policy"
+---
+
+## Request Body
+
+<ParamField body="name" type="string" required>
+  Human-readable policy name
+</ParamField>
+
+<ParamField body="description" type="string">
+  Policy description
+</ParamField>
+
+<ParamField body="rules" type="array" required>
+  Array of rule objects
+  <Expandable title="Rule Object">
+    <ParamField body="action" type="string" required>
+      `allow`, `deny`, or `review`
+    </ParamField>
+    <ParamField body="priority" type="integer">
+      Rule priority (lower = higher priority)
+    </ParamField>
+    <ParamField body="conditions" type="object" required>
+      Conditions that trigger this rule
+    </ParamField>
+    <ParamField body="permissions" type="array">
+      Granted permissions (for allow rules)
+    </ParamField>
+    <ParamField body="rateLimit" type="object">
+      Rate limiting configuration
+    </ParamField>
+    <ParamField body="message" type="string">
+      Custom message for denials
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="defaultAction" type="string" default="deny">
+  Action when no rules match: `allow` or `deny`
+</ParamField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://api.raily.ai/v1/policies \
+  -H "Authorization: Bearer raily_sk_xxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Enterprise Access",
+    "description": "Full access for enterprise partners",
+    "rules": [
+      {
+        "action": "allow",
+        "priority": 1,
+        "conditions": {
+          "licenseType": "enterprise"
+        },
+        "permissions": ["full_access", "commercial_use"],
+        "rateLimit": {
+          "requests": 10000,
+          "period": "hour"
+        }
+      },
+      {
+        "action": "deny",
+        "priority": 99,
+        "conditions": { "default": true },
+        "message": "Enterprise license required"
+      }
+    ],
+    "defaultAction": "deny"
+  }'
+```
+
+```javascript JavaScript
+const policy = await raily.policies.create({
+  name: 'Enterprise Access',
+  description: 'Full access for enterprise partners',
+  rules: [
+    {
+      action: 'allow',
+      priority: 1,
+      conditions: { licenseType: 'enterprise' },
+      permissions: ['full_access', 'commercial_use'],
+      rateLimit: { requests: 10000, period: 'hour' }
+    },
+    {
+      action: 'deny',
+      priority: 99,
+      conditions: { default: true },
+      message: 'Enterprise license required'
+    }
+  ]
+});
+
+console.log(`Created: ${policy.id}`);
+```
+
+```python Python
+policy = raily.policies.create(
+    name="Enterprise Access",
+    description="Full access for enterprise partners",
+    rules=[
+        {
+            "action": "allow",
+            "priority": 1,
+            "conditions": {"license_type": "enterprise"},
+            "permissions": ["full_access", "commercial_use"],
+            "rate_limit": {"requests": 10000, "period": "hour"}
+        },
+        {
+            "action": "deny",
+            "priority": 99,
+            "conditions": {"default": True},
+            "message": "Enterprise license required"
+        }
+    ]
+)
+
+print(f"Created: {policy.id}")
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success (201)
+{
+  "id": "pol_xyz789",
+  "object": "policy",
+  "name": "Enterprise Access",
+  "description": "Full access for enterprise partners",
+  "rules": [
+    {
+      "action": "allow",
+      "priority": 1,
+      "conditions": { "licenseType": "enterprise" },
+      "permissions": ["full_access", "commercial_use"],
+      "rateLimit": { "requests": 10000, "period": "hour" }
+    },
+    {
+      "action": "deny",
+      "priority": 99,
+      "conditions": { "default": true },
+      "message": "Enterprise license required"
+    }
+  ],
+  "defaultAction": "deny",
+  "version": 1,
+  "created": "2024-01-15T10:30:00Z"
+}
+```
+
+</ResponseExample>

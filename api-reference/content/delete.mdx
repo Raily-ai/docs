@@ -1,0 +1,106 @@
+---
+title: "Delete Content"
+api: "DELETE /v1/content/{id}"
+description: "Permanently delete a content item"
+---
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The content ID (e.g., `cnt_abc123`) or external ID
+</ParamField>
+
+## Response
+
+Returns a confirmation object.
+
+<ResponseField name="id" type="string">
+  The deleted content ID
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  Always `content`
+</ResponseField>
+
+<ResponseField name="deleted" type="boolean">
+  Always `true`
+</ResponseField>
+
+<Warning>
+  **This action is irreversible.** All associated data including access logs and analytics will be permanently deleted. Consider archiving content instead if you want to preserve historical data.
+</Warning>
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE https://api.raily.ai/v1/content/cnt_abc123xyz \
+  -H "Authorization: Bearer raily_sk_xxxxx"
+```
+
+```javascript JavaScript
+const result = await raily.content.delete('cnt_abc123xyz');
+
+if (result.deleted) {
+  console.log(`Deleted content: ${result.id}`);
+}
+```
+
+```python Python
+result = raily.content.delete("cnt_abc123xyz")
+
+if result.deleted:
+    print(f"Deleted content: {result.id}")
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success (200)
+{
+  "id": "cnt_abc123xyz",
+  "object": "content",
+  "deleted": true
+}
+```
+
+```json Not Found (404)
+{
+  "error": {
+    "code": "content_not_found",
+    "message": "Content with ID 'cnt_invalid' not found",
+    "type": "not_found_error"
+  }
+}
+```
+
+</ResponseExample>
+
+## Alternative: Archive Instead of Delete
+
+If you want to disable access but preserve data:
+
+```javascript
+// Archive - preserves data, disables access
+await raily.content.update('cnt_abc123xyz', {
+  status: 'archived'
+});
+
+// Later, restore if needed
+await raily.content.update('cnt_abc123xyz', {
+  status: 'active'
+});
+```
+
+## Bulk Delete
+
+To delete multiple content items:
+
+```javascript
+const ids = ['cnt_abc123', 'cnt_def456', 'cnt_ghi789'];
+
+const results = await raily.content.bulkDelete({ ids });
+
+console.log(`Deleted: ${results.deleted}`);
+console.log(`Failed: ${results.failed}`);
+```

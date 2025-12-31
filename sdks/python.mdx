@@ -1,0 +1,461 @@
+---
+title: "Python SDK"
+description: "Official Raily SDK for Python"
+---
+
+## Installation
+
+```bash
+pip install raily
+```
+
+**Requirements**: Python 3.8+
+
+---
+
+## Quick Start
+
+```python
+from raily import Raily
+import os
+
+raily = Raily(api_key=os.environ["RAILY_API_KEY"])
+
+# Create content
+content = raily.content.create(
+    external_id="article-123",
+    title="My Article",
+    type="article",
+    source="https://example.com/article"
+)
+
+print(f"Created: {content.id}")
+```
+
+---
+
+## Configuration
+
+```python
+from raily import Raily
+
+raily = Raily(
+    # Required
+    api_key=os.environ["RAILY_API_KEY"],
+
+    # Optional
+    base_url="https://api.raily.ai",
+    timeout=30.0,  # 30 seconds
+    max_retries=3,
+)
+```
+
+### Environment Variables
+
+```bash
+export RAILY_API_KEY=raily_sk_xxxxx
+export RAILY_BASE_URL=https://api.raily.ai  # Optional
+```
+
+---
+
+## Content API
+
+### Create Content
+
+```python
+content = raily.content.create(
+    external_id="article-123",
+    title="Introduction to AI",
+    type="article",
+    source="https://example.com/articles/ai",
+    policy_id="pol_premium",
+    metadata={
+        "author": "Jane Smith",
+        "category": "Technology"
+    },
+    tags=["ai", "technology"]
+)
+```
+
+### List Content
+
+```python
+content = raily.content.list(limit=20, type="article")
+
+for item in content.data:
+    print(f"{item.title} ({item.id})")
+
+# Pagination
+if content.has_more:
+    next_page = raily.content.list(cursor=content.next_cursor)
+```
+
+### Get Content
+
+```python
+content = raily.content.get("cnt_abc123", expand=["policy"])
+
+print(content.title)
+print(content.policy.name)
+```
+
+### Update Content
+
+```python
+updated = raily.content.update(
+    "cnt_abc123",
+    title="Updated Title",
+    metadata={"featured": True}
+)
+```
+
+### Upsert Content
+
+```python
+# Creates if doesn't exist, updates if it does
+content = raily.content.upsert(
+    external_id="article-123",
+    title="My Article",
+    type="article",
+    source="https://example.com/article"
+)
+```
+
+### Delete Content
+
+```python
+raily.content.delete("cnt_abc123")
+```
+
+### Bulk Operations
+
+```python
+result = raily.content.bulk_create(
+    items=[
+        {"external_id": "a1", "title": "Article 1", "type": "article", "source": "..."},
+        {"external_id": "a2", "title": "Article 2", "type": "article", "source": "..."}
+    ],
+    options={"skip_duplicates": True}
+)
+
+print(f"Created: {result.created}, Skipped: {result.skipped}")
+```
+
+---
+
+## Policies API
+
+### Create Policy
+
+```python
+policy = raily.policies.create(
+    name="Premium Access",
+    rules=[
+        {
+            "action": "allow",
+            "priority": 1,
+            "conditions": {"has_valid_license": True},
+            "permissions": ["full_access"]
+        },
+        {
+            "action": "deny",
+            "priority": 99,
+            "conditions": {"default": True}
+        }
+    ]
+)
+```
+
+### List Policies
+
+```python
+policies = raily.policies.list()
+```
+
+### Update Policy
+
+```python
+updated = raily.policies.update(
+    "pol_abc123",
+    rules=[...]  # new rules
+)
+```
+
+### Test Policy
+
+```python
+result = raily.policies.test(
+    policy_id="pol_abc123",
+    request={
+        "requester_id": "test_partner",
+        "license_type": "enterprise"
+    }
+)
+
+print(f"Would be: {'ALLOWED' if result.allowed else 'DENIED'}")
+```
+
+---
+
+## Access API
+
+### Check Access
+
+```python
+access = raily.access.check(
+    content_id="cnt_abc123",
+    requester_id="my_app",
+    context={
+        "purpose": "rag",
+        "model": "gpt-4"
+    }
+)
+
+if access.allowed:
+    print("Access granted!")
+    print(f"Permissions: {', '.join(access.permissions)}")
+    print(f"Content URL: {access.content_url}")
+
+    # Fetch content
+    import requests
+    response = requests.get(
+        access.content_url,
+        headers={"Authorization": f"Bearer {access.token}"}
+    )
+    content = response.text
+else:
+    print(f"Access denied: {access.reason}")
+```
+
+---
+
+## Analytics API
+
+### Usage Analytics
+
+```python
+usage = raily.analytics.usage(
+    period="30d",
+    group_by="day",
+    content_id="cnt_abc123"  # Optional filter
+)
+
+print(f"Total requests: {usage.summary.total_requests}")
+print(f"Allowed: {usage.summary.allowed}")
+print(f"Denied: {usage.summary.denied}")
+```
+
+### Revenue Analytics
+
+```python
+revenue = raily.analytics.revenue(
+    period="30d",
+    currency="USD"
+)
+
+print(f"Total revenue: ${revenue.summary.total}")
+```
+
+---
+
+## Webhooks API
+
+### Create Webhook
+
+```python
+webhook = raily.webhooks.create(
+    url="https://api.example.com/webhooks/raily",
+    events=["access.granted", "access.denied"]
+)
+
+print(f"Webhook secret: {webhook.secret}")
+```
+
+### Verify Webhook (Flask)
+
+```python
+from flask import Flask, request, abort
+from raily.webhooks import verify_signature
+import hmac
+
+app = Flask(__name__)
+
+@app.route("/webhooks/raily", methods=["POST"])
+def handle_webhook():
+    signature = request.headers.get("X-Raily-Signature")
+    timestamp = request.headers.get("X-Raily-Timestamp")
+
+    try:
+        event = verify_signature(
+            payload=request.data,
+            signature=signature,
+            timestamp=timestamp,
+            secret=os.environ["RAILY_WEBHOOK_SECRET"]
+        )
+    except ValueError:
+        abort(401)
+
+    # Handle event
+    if event["type"] == "access.granted":
+        handle_access_granted(event["data"])
+
+    return "OK", 200
+```
+
+---
+
+## Error Handling
+
+```python
+from raily import Raily
+from raily.exceptions import (
+    RailyError,
+    AuthenticationError,
+    NotFoundError,
+    RateLimitError,
+    ValidationError
+)
+
+try:
+    content = raily.content.get("invalid")
+except NotFoundError:
+    print("Content not found")
+except RateLimitError as e:
+    print(f"Rate limited. Retry after {e.retry_after}s")
+except ValidationError as e:
+    print(f"Validation error: {e.message}")
+    print(f"Field: {e.param}")
+except AuthenticationError:
+    print("Invalid API key")
+except RailyError as e:
+    print(f"API error: {e.code} - {e.message}")
+```
+
+---
+
+## Async Support
+
+The SDK supports async/await:
+
+```python
+import asyncio
+from raily import AsyncRaily
+
+async def main():
+    raily = AsyncRaily(api_key=os.environ["RAILY_API_KEY"])
+
+    # All methods are async
+    content = await raily.content.create(
+        external_id="article-123",
+        title="My Article",
+        type="article",
+        source="https://example.com"
+    )
+
+    access = await raily.access.check(
+        content_id=content.id,
+        requester_id="my_app",
+        context={"purpose": "rag"}
+    )
+
+    print(f"Access: {'granted' if access.allowed else 'denied'}")
+
+asyncio.run(main())
+```
+
+---
+
+## Type Hints
+
+The SDK includes full type hints:
+
+```python
+from raily import Raily
+from raily.types import Content, Policy, AccessCheckResponse
+
+raily = Raily(api_key=os.environ["RAILY_API_KEY"])
+
+# Type hints for better IDE support
+content: Content = raily.content.create(
+    external_id="article-123",
+    title="My Article",
+    type="article",
+    source="https://example.com"
+)
+
+access: AccessCheckResponse = raily.access.check(
+    content_id=content.id,
+    requester_id="my_app",
+    context={"purpose": "rag"}
+)
+```
+
+---
+
+## Integration Examples
+
+### With LangChain
+
+```python
+from langchain.schema import BaseRetriever, Document
+from raily import Raily
+import requests
+
+class RailyRetriever(BaseRetriever):
+    def __init__(self, content_ids: list[str], requester_id: str):
+        self.content_ids = content_ids
+        self.requester_id = requester_id
+        self.raily = Raily(api_key=os.environ["RAILY_API_KEY"])
+
+    def get_relevant_documents(self, query: str) -> list[Document]:
+        documents = []
+        for content_id in self.content_ids:
+            access = self.raily.access.check(
+                content_id=content_id,
+                requester_id=self.requester_id,
+                context={"purpose": "rag"}
+            )
+            if access.allowed:
+                response = requests.get(access.content_url)
+                documents.append(Document(page_content=response.text))
+        return documents
+```
+
+### With FastAPI
+
+```python
+from fastapi import FastAPI, Depends
+from raily import Raily
+
+app = FastAPI()
+
+def get_raily():
+    return Raily(api_key=os.environ["RAILY_API_KEY"])
+
+@app.get("/content/{content_id}")
+async def get_content(content_id: str, raily: Raily = Depends(get_raily)):
+    access = raily.access.check(
+        content_id=content_id,
+        requester_id="api_user",
+        context={"purpose": "api_access"}
+    )
+
+    if not access.allowed:
+        raise HTTPException(status_code=403, detail=access.reason)
+
+    return {"content_url": access.content_url}
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="JavaScript SDK" icon="js" href="/sdks/javascript">
+    JavaScript SDK documentation
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Complete API documentation
+  </Card>
+</CardGroup>

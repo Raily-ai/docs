@@ -1,0 +1,121 @@
+---
+title: "Usage Analytics"
+api: "GET /v1/analytics/usage"
+description: "Retrieve content access usage analytics"
+---
+
+## Query Parameters
+
+<ParamField query="period" type="string" default="30d">
+  Time period: `7d`, `30d`, `90d`, `year`, or `all`
+</ParamField>
+
+<ParamField query="startDate" type="string">
+  Custom start date (ISO 8601)
+</ParamField>
+
+<ParamField query="endDate" type="string">
+  Custom end date (ISO 8601)
+</ParamField>
+
+<ParamField query="groupBy" type="string" default="day">
+  Grouping: `hour`, `day`, `week`, `month`
+</ParamField>
+
+<ParamField query="contentId" type="string">
+  Filter by content ID
+</ParamField>
+
+<ParamField query="requesterId" type="string">
+  Filter by requester ID
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filter by content type
+</ParamField>
+
+## Response
+
+<ResponseField name="summary" type="object">
+  Aggregated metrics
+  <Expandable>
+    <ResponseField name="totalRequests" type="integer">Total access requests</ResponseField>
+    <ResponseField name="allowed" type="integer">Allowed requests</ResponseField>
+    <ResponseField name="denied" type="integer">Denied requests</ResponseField>
+    <ResponseField name="uniqueRequesters" type="integer">Unique requesters</ResponseField>
+    <ResponseField name="uniqueContent" type="integer">Unique content accessed</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="timeSeries" type="array">
+  Time-bucketed data points
+</ResponseField>
+
+<ResponseField name="topContent" type="array">
+  Most accessed content
+</ResponseField>
+
+<ResponseField name="topRequesters" type="array">
+  Most active requesters
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl "https://api.raily.ai/v1/analytics/usage?period=30d&groupBy=day" \
+  -H "Authorization: Bearer raily_sk_xxxxx"
+```
+
+```javascript JavaScript
+const analytics = await raily.analytics.usage({
+  period: '30d',
+  groupBy: 'day'
+});
+
+console.log(`Total requests: ${analytics.summary.totalRequests}`);
+console.log(`Allowed: ${analytics.summary.allowed}`);
+console.log(`Denied: ${analytics.summary.denied}`);
+```
+
+```python Python
+analytics = raily.analytics.usage(
+    period="30d",
+    group_by="day"
+)
+
+print(f"Total requests: {analytics.summary.total_requests}")
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+  "summary": {
+    "totalRequests": 125430,
+    "allowed": 118200,
+    "denied": 7230,
+    "uniqueRequesters": 45,
+    "uniqueContent": 1250
+  },
+  "timeSeries": [
+    { "date": "2024-01-01", "requests": 4180, "allowed": 3950, "denied": 230 },
+    { "date": "2024-01-02", "requests": 4320, "allowed": 4100, "denied": 220 }
+  ],
+  "topContent": [
+    { "id": "cnt_abc", "title": "AI Report 2024", "requests": 8500 },
+    { "id": "cnt_def", "title": "Market Analysis", "requests": 6200 }
+  ],
+  "topRequesters": [
+    { "id": "partner_openai", "name": "OpenAI", "requests": 45000 },
+    { "id": "partner_anthropic", "name": "Anthropic", "requests": 32000 }
+  ],
+  "byDenialReason": [
+    { "reason": "no_license", "count": 4500 },
+    { "reason": "rate_limit_exceeded", "count": 2100 }
+  ]
+}
+```
+
+</ResponseExample>

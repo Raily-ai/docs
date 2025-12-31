@@ -1,0 +1,490 @@
+---
+title: "Analytics"
+description: "Monitor content usage, track revenue, and gain insights from your data"
+---
+
+## Overview
+
+Raily's analytics provide deep insights into how AI systems are consuming your content. Track usage patterns, monitor revenue, identify top performers, and make data-driven decisions about your content strategy.
+
+## Dashboard Overview
+
+The Raily dashboard provides real-time visibility into your content ecosystem:
+
+<CardGroup cols={2}>
+  <Card title="Request Volume" icon="chart-line">
+    Total requests over time, with breakdown by allowed vs denied
+  </Card>
+  <Card title="Revenue Tracking" icon="dollar-sign">
+    Earnings from licensed access, trends, and projections
+  </Card>
+  <Card title="Top Content" icon="fire">
+    Your most-requested content pieces
+  </Card>
+  <Card title="Partner Activity" icon="users">
+    Which AI systems are accessing your content
+  </Card>
+</CardGroup>
+
+---
+
+## Usage Analytics
+
+### Fetch Usage Data
+
+<CodeGroup>
+
+```javascript JavaScript
+const usage = await raily.analytics.usage({
+  // Time range
+  period: "30d",  // or: 7d, 90d, custom
+  startDate: "2024-01-01",
+  endDate: "2024-01-31",
+
+  // Granularity
+  groupBy: "day",  // hour, day, week, month
+
+  // Filters
+  contentId: "cnt_abc123",  // optional: specific content
+  requesterId: "partner_openai",  // optional: specific partner
+  type: "article"  // optional: content type
+});
+```
+
+```python Python
+usage = raily.analytics.usage(
+    period="30d",
+    group_by="day",
+    content_id="cnt_abc123"
+)
+```
+
+</CodeGroup>
+
+### Response Structure
+
+```javascript
+{
+  summary: {
+    totalRequests: 125430,
+    allowed: 118200,
+    denied: 7230,
+    uniqueRequesters: 45,
+    uniqueContent: 1250
+  },
+
+  timeSeries: [
+    {
+      date: "2024-01-01",
+      requests: 4180,
+      allowed: 3950,
+      denied: 230
+    },
+    {
+      date: "2024-01-02",
+      requests: 4320,
+      allowed: 4100,
+      denied: 220
+    }
+    // ...
+  ],
+
+  byRequester: [
+    { id: "partner_openai", name: "OpenAI", requests: 45000 },
+    { id: "partner_anthropic", name: "Anthropic", requests: 32000 },
+    { id: "partner_google", name: "Google", requests: 28000 }
+  ],
+
+  byContent: [
+    { id: "cnt_abc", title: "AI Report 2024", requests: 8500 },
+    { id: "cnt_def", title: "Market Analysis Q4", requests: 6200 }
+  ],
+
+  byDenialReason: [
+    { reason: "no_license", count: 4500 },
+    { reason: "rate_limit_exceeded", count: 2100 },
+    { reason: "policy_denied", count: 630 }
+  ]
+}
+```
+
+### Common Queries
+
+<AccordionGroup>
+  <Accordion title="Top Performing Content" icon="trophy">
+    ```javascript
+    const topContent = await raily.analytics.usage({
+      period: "30d",
+      groupBy: "content",
+      sortBy: "requests",
+      limit: 10
+    });
+
+    topContent.byContent.forEach(item => {
+      console.log(`${item.title}: ${item.requests} requests`);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Most Active Partners" icon="users">
+    ```javascript
+    const partners = await raily.analytics.usage({
+      period: "7d",
+      groupBy: "requester"
+    });
+
+    partners.byRequester.forEach(partner => {
+      console.log(`${partner.name}: ${partner.requests} requests`);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Denial Analysis" icon="ban">
+    ```javascript
+    const denials = await raily.analytics.usage({
+      period: "7d",
+      filter: { allowed: false }
+    });
+
+    console.log(`Total denials: ${denials.summary.denied}`);
+    denials.byDenialReason.forEach(reason => {
+      console.log(`${reason.reason}: ${reason.count}`);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Hourly Traffic Pattern" icon="clock">
+    ```javascript
+    const hourly = await raily.analytics.usage({
+      period: "7d",
+      groupBy: "hour"
+    });
+
+    // Find peak hours
+    const sorted = hourly.timeSeries.sort((a, b) => b.requests - a.requests);
+    console.log(`Peak hour: ${sorted[0].hour}:00 with ${sorted[0].requests} requests`);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Revenue Analytics
+
+Track earnings from your content licensing:
+
+<CodeGroup>
+
+```javascript JavaScript
+const revenue = await raily.analytics.revenue({
+  period: "30d",
+  groupBy: "day",
+  currency: "USD"
+});
+
+console.log(`Total Revenue: $${revenue.summary.total}`);
+console.log(`vs Last Period: ${revenue.summary.changePercent}%`);
+```
+
+```python Python
+revenue = raily.analytics.revenue(
+    period="30d",
+    group_by="day",
+    currency="USD"
+)
+
+print(f"Total Revenue: ${revenue.summary.total}")
+```
+
+</CodeGroup>
+
+### Revenue Response
+
+```javascript
+{
+  summary: {
+    total: 45230.00,
+    currency: "USD",
+    changePercent: 12.5,  // vs previous period
+    projectedMonthly: 52000.00
+  },
+
+  timeSeries: [
+    { date: "2024-01-01", revenue: 1520.00 },
+    { date: "2024-01-02", revenue: 1610.00 }
+    // ...
+  ],
+
+  byLicenseType: {
+    enterprise: 35000.00,
+    professional: 8500.00,
+    basic: 1730.00
+  },
+
+  byRequester: [
+    { id: "partner_openai", name: "OpenAI", revenue: 18500.00 },
+    { id: "partner_anthropic", name: "Anthropic", revenue: 12200.00 }
+  ],
+
+  byContent: [
+    { id: "cnt_abc", title: "AI Report 2024", revenue: 8500.00 },
+    { id: "cnt_def", title: "Premium Dataset", revenue: 6200.00 }
+  ],
+
+  byContentType: {
+    report: 22000.00,
+    dataset: 15000.00,
+    article: 8230.00
+  }
+}
+```
+
+### Revenue Insights
+
+<Tabs>
+  <Tab title="By License Tier">
+    ```javascript
+    const revenue = await raily.analytics.revenue({
+      period: "quarter",
+      groupBy: "licenseType"
+    });
+
+    // Visualize revenue distribution
+    const total = revenue.summary.total;
+    Object.entries(revenue.byLicenseType).forEach(([tier, amount]) => {
+      const percent = ((amount / total) * 100).toFixed(1);
+      console.log(`${tier}: $${amount} (${percent}%)`);
+    });
+    ```
+  </Tab>
+  <Tab title="By Content Type">
+    ```javascript
+    const revenue = await raily.analytics.revenue({
+      period: "30d",
+      groupBy: "contentType"
+    });
+
+    // Find most profitable content type
+    const sorted = Object.entries(revenue.byContentType)
+      .sort(([,a], [,b]) => b - a);
+
+    console.log(`Top revenue type: ${sorted[0][0]} at $${sorted[0][1]}`);
+    ```
+  </Tab>
+  <Tab title="Growth Trend">
+    ```javascript
+    const current = await raily.analytics.revenue({ period: "30d" });
+    const previous = await raily.analytics.revenue({
+      period: "30d",
+      endDate: "2024-01-01"  // Previous period
+    });
+
+    const growth = ((current.summary.total - previous.summary.total)
+      / previous.summary.total * 100).toFixed(1);
+
+    console.log(`Month-over-month growth: ${growth}%`);
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Real-Time Monitoring
+
+Monitor access requests as they happen:
+
+```javascript
+// Subscribe to real-time events
+const stream = raily.analytics.stream({
+  events: ["access.granted", "access.denied", "rate_limit.exceeded"]
+});
+
+stream.on("event", (event) => {
+  console.log(`[${event.type}] ${event.contentId} by ${event.requesterId}`);
+
+  if (event.type === "rate_limit.exceeded") {
+    // Alert on rate limit issues
+    alertTeam(`Rate limit exceeded: ${event.requesterId}`);
+  }
+});
+
+// Clean up when done
+stream.close();
+```
+
+### Alerts & Notifications
+
+Set up automated alerts for important metrics:
+
+```javascript
+await raily.alerts.create({
+  name: "High Denial Rate",
+  condition: {
+    metric: "denial_rate",
+    operator: "greater_than",
+    threshold: 0.1,  // 10%
+    period: "1h"
+  },
+  actions: [
+    { type: "email", to: "team@example.com" },
+    { type: "webhook", url: "https://hooks.slack.com/..." }
+  ]
+});
+
+await raily.alerts.create({
+  name: "Revenue Milestone",
+  condition: {
+    metric: "revenue",
+    operator: "greater_than",
+    threshold: 100000,
+    period: "month"
+  },
+  actions: [
+    { type: "email", to: "ceo@example.com" }
+  ]
+});
+```
+
+---
+
+## Export & Reporting
+
+### Export Data
+
+```javascript
+// Export to CSV
+const exportJob = await raily.analytics.export({
+  type: "usage",
+  period: "90d",
+  format: "csv",
+  includeFields: ["date", "contentId", "requesterId", "allowed", "responseTime"]
+});
+
+// Download when ready
+const downloadUrl = await raily.analytics.getExport(exportJob.id);
+```
+
+### Scheduled Reports
+
+```javascript
+await raily.reports.schedule({
+  name: "Weekly Summary",
+  type: "summary",
+  frequency: "weekly",
+  dayOfWeek: "monday",
+  time: "09:00",
+  timezone: "America/New_York",
+  recipients: ["team@example.com"],
+  include: ["usage", "revenue", "topContent", "topRequesters"]
+});
+```
+
+---
+
+## API Rate Limits Dashboard
+
+Monitor your API usage and rate limits:
+
+```javascript
+const limits = await raily.analytics.rateLimits();
+
+console.log(`API Requests Used: ${limits.current} / ${limits.limit}`);
+console.log(`Reset: ${limits.resetAt}`);
+console.log(`Plan: ${limits.plan}`);
+
+// Per-endpoint breakdown
+limits.byEndpoint.forEach(endpoint => {
+  console.log(`${endpoint.path}: ${endpoint.used}/${endpoint.limit}`);
+});
+```
+
+---
+
+## Integrations
+
+### Webhook Events
+
+Receive analytics data via webhooks:
+
+```javascript
+// Configure webhook for analytics events
+await raily.webhooks.create({
+  url: "https://api.example.com/raily/analytics",
+  events: [
+    "analytics.daily_summary",
+    "analytics.weekly_summary",
+    "analytics.threshold_exceeded"
+  ]
+});
+```
+
+### External Analytics Platforms
+
+Export data to your existing analytics stack:
+
+<AccordionGroup>
+  <Accordion title="Google Analytics" icon="chart-pie">
+    ```javascript
+    // Send events to GA4
+    const usage = await raily.analytics.usage({ period: "1d" });
+
+    gtag('event', 'raily_daily_summary', {
+      total_requests: usage.summary.totalRequests,
+      allowed: usage.summary.allowed,
+      denied: usage.summary.denied
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Mixpanel" icon="chart-bar">
+    ```javascript
+    // Track to Mixpanel
+    mixpanel.track('Content Access', {
+      content_id: event.contentId,
+      requester: event.requesterId,
+      allowed: event.allowed
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="DataDog" icon="dog">
+    ```javascript
+    // Send metrics to DataDog
+    const dogstatsd = new StatsD();
+
+    dogstatsd.gauge('raily.requests.total', usage.summary.totalRequests);
+    dogstatsd.gauge('raily.requests.allowed', usage.summary.allowed);
+    dogstatsd.gauge('raily.revenue.total', revenue.summary.total);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Set Up Alerts" icon="bell">
+    Configure alerts for unusual patterns like spike in denials or drops in traffic.
+  </Card>
+  <Card title="Regular Reviews" icon="calendar">
+    Schedule weekly reviews of your analytics to spot trends early.
+  </Card>
+  <Card title="Export Regularly" icon="download">
+    Export historical data for compliance and long-term analysis.
+  </Card>
+  <Card title="Track by Segment" icon="layer-group">
+    Break down analytics by content type, requester, and license tier for deeper insights.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
+    Set up real-time event notifications.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/analytics/usage">
+    Complete analytics API documentation.
+  </Card>
+</CardGroup>

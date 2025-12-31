@@ -1,0 +1,196 @@
+---
+title: "Create Content"
+api: "POST /v1/content"
+description: "Register new content with Raily"
+---
+
+## Request Body
+
+<ParamField body="externalId" type="string" required>
+  Your unique identifier for this content. Used for syncing with your systems.
+</ParamField>
+
+<ParamField body="title" type="string" required>
+  Human-readable title for the content.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Content type. One of: `article`, `report`, `image`, `dataset`, `video`
+</ParamField>
+
+<ParamField body="source" type="string" required>
+  URL to the original content.
+</ParamField>
+
+<ParamField body="policyId" type="string">
+  Policy ID to apply. Uses default policy if not specified.
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Custom key-value pairs for your data.
+  <Expandable>
+    You can include any JSON-serializable data here. Common fields:
+    - `author` - Content author
+    - `publishedAt` - Publication date
+    - `category` - Content category
+    - `tags` - Array of tags
+    - `wordCount` - Word count for text content
+  </Expandable>
+</ParamField>
+
+<ParamField body="tags" type="array">
+  Array of string tags for categorization.
+</ParamField>
+
+## Response
+
+Returns the created content object.
+
+<ResponseField name="id" type="string">
+  Unique Raily identifier (e.g., `cnt_abc123xyz`)
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  Always `content`
+</ResponseField>
+
+<ResponseField name="externalId" type="string">
+  Your external identifier
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Content title
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Content type
+</ResponseField>
+
+<ResponseField name="source" type="string">
+  Source URL
+</ResponseField>
+
+<ResponseField name="policyId" type="string">
+  Applied policy ID
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  Custom metadata
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Always `active` for new content
+</ResponseField>
+
+<ResponseField name="created" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://api.raily.ai/v1/content \
+  -H "Authorization: Bearer raily_sk_xxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "externalId": "article-123",
+    "title": "Introduction to AI",
+    "type": "article",
+    "source": "https://example.com/articles/ai-intro",
+    "policyId": "pol_premium",
+    "metadata": {
+      "author": "Jane Smith",
+      "category": "Technology",
+      "publishedAt": "2024-01-15",
+      "wordCount": 2500
+    },
+    "tags": ["ai", "technology", "tutorial"]
+  }'
+```
+
+```javascript JavaScript
+const content = await raily.content.create({
+  externalId: 'article-123',
+  title: 'Introduction to AI',
+  type: 'article',
+  source: 'https://example.com/articles/ai-intro',
+  policyId: 'pol_premium',
+  metadata: {
+    author: 'Jane Smith',
+    category: 'Technology',
+    publishedAt: '2024-01-15',
+    wordCount: 2500
+  },
+  tags: ['ai', 'technology', 'tutorial']
+});
+
+console.log(`Created: ${content.id}`);
+```
+
+```python Python
+content = raily.content.create(
+    external_id="article-123",
+    title="Introduction to AI",
+    type="article",
+    source="https://example.com/articles/ai-intro",
+    policy_id="pol_premium",
+    metadata={
+        "author": "Jane Smith",
+        "category": "Technology",
+        "published_at": "2024-01-15",
+        "word_count": 2500
+    },
+    tags=["ai", "technology", "tutorial"]
+)
+
+print(f"Created: {content.id}")
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success (201)
+{
+  "id": "cnt_abc123xyz",
+  "object": "content",
+  "externalId": "article-123",
+  "title": "Introduction to AI",
+  "type": "article",
+  "source": "https://example.com/articles/ai-intro",
+  "policyId": "pol_premium",
+  "metadata": {
+    "author": "Jane Smith",
+    "category": "Technology",
+    "publishedAt": "2024-01-15",
+    "wordCount": 2500
+  },
+  "tags": ["ai", "technology", "tutorial"],
+  "status": "active",
+  "created": "2024-01-15T10:30:00Z",
+  "updated": "2024-01-15T10:30:00Z"
+}
+```
+
+```json Duplicate External ID (409)
+{
+  "error": {
+    "code": "duplicate_external_id",
+    "message": "Content with externalId 'article-123' already exists",
+    "type": "conflict_error"
+  }
+}
+```
+
+```json Validation Error (422)
+{
+  "error": {
+    "code": "validation_error",
+    "message": "The 'source' field must be a valid URL",
+    "param": "source",
+    "type": "validation_error"
+  }
+}
+```
+
+</ResponseExample>

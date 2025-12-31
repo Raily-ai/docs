@@ -1,0 +1,421 @@
+---
+title: "Content Ingestion"
+description: "Learn how to import and manage your content in Raily"
+---
+
+## Overview
+
+Raily provides multiple ways to import your content, from single-item API calls to bulk imports from your existing CMS. This guide covers all ingestion methods and best practices.
+
+## Ingestion Methods
+
+<CardGroup cols={3}>
+  <Card title="API" icon="code">
+    Direct API calls for programmatic control
+  </Card>
+  <Card title="Bulk Import" icon="upload">
+    CSV/JSON uploads for large datasets
+  </Card>
+  <Card title="CMS Sync" icon="rotate">
+    Automatic sync with your CMS
+  </Card>
+</CardGroup>
+
+---
+
+## Single Content via API
+
+The simplest way to add content is through the API:
+
+<CodeGroup>
+
+```javascript JavaScript
+const content = await raily.content.create({
+  externalId: "blog-post-123",
+  title: "Getting Started with AI",
+  type: "article",
+  source: "https://blog.example.com/ai-getting-started",
+  metadata: {
+    author: "Sarah Johnson",
+    publishedAt: "2024-01-15T10:00:00Z",
+    tags: ["ai", "tutorial", "beginner"],
+    wordCount: 1500,
+    readingTime: 6
+  }
+});
+```
+
+```python Python
+content = raily.content.create(
+    external_id="blog-post-123",
+    title="Getting Started with AI",
+    type="article",
+    source="https://blog.example.com/ai-getting-started",
+    metadata={
+        "author": "Sarah Johnson",
+        "published_at": "2024-01-15T10:00:00Z",
+        "tags": ["ai", "tutorial", "beginner"],
+        "word_count": 1500,
+        "reading_time": 6
+    }
+)
+```
+
+</CodeGroup>
+
+### Content Fields Reference
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `externalId` | Yes | Your unique identifier for this content |
+| `title` | Yes | Human-readable title |
+| `type` | Yes | Content type: `article`, `report`, `image`, `dataset`, `video` |
+| `source` | Yes | URL or path to the original content |
+| `metadata` | No | Custom key-value pairs for your data |
+| `policyId` | No | Access policy to apply |
+| `tags` | No | Array of tags for categorization |
+
+---
+
+## Bulk Import
+
+For large content libraries, use bulk import to add thousands of items at once.
+
+### JSON Format
+
+```json
+{
+  "items": [
+    {
+      "externalId": "article-001",
+      "title": "Introduction to Machine Learning",
+      "type": "article",
+      "source": "https://example.com/ml-intro",
+      "metadata": {
+        "author": "Dr. Emily Chen",
+        "category": "Education"
+      }
+    },
+    {
+      "externalId": "article-002",
+      "title": "Deep Learning Fundamentals",
+      "type": "article",
+      "source": "https://example.com/dl-fundamentals",
+      "metadata": {
+        "author": "Dr. Emily Chen",
+        "category": "Education"
+      }
+    }
+  ]
+}
+```
+
+### CSV Format
+
+```csv
+externalId,title,type,source,author,category
+article-001,Introduction to Machine Learning,article,https://example.com/ml-intro,Dr. Emily Chen,Education
+article-002,Deep Learning Fundamentals,article,https://example.com/dl-fundamentals,Dr. Emily Chen,Education
+```
+
+### Bulk Import via API
+
+<CodeGroup>
+
+```javascript JavaScript
+// From JSON array
+const result = await raily.content.bulkCreate({
+  items: [
+    {
+      externalId: "article-001",
+      title: "Introduction to Machine Learning",
+      type: "article",
+      source: "https://example.com/ml-intro"
+    },
+    {
+      externalId: "article-002",
+      title: "Deep Learning Fundamentals",
+      type: "article",
+      source: "https://example.com/dl-fundamentals"
+    }
+    // ... up to 1000 items per request
+  ],
+  options: {
+    skipDuplicates: true,  // Skip items with existing externalId
+    defaultPolicy: "pol_abc123"  // Apply this policy to all items
+  }
+});
+
+console.log(`Imported: ${result.created}`);
+console.log(`Skipped: ${result.skipped}`);
+console.log(`Errors: ${result.errors.length}`);
+```
+
+```python Python
+result = raily.content.bulk_create(
+    items=[
+        {
+            "external_id": "article-001",
+            "title": "Introduction to Machine Learning",
+            "type": "article",
+            "source": "https://example.com/ml-intro"
+        },
+        {
+            "external_id": "article-002",
+            "title": "Deep Learning Fundamentals",
+            "type": "article",
+            "source": "https://example.com/dl-fundamentals"
+        }
+    ],
+    options={
+        "skip_duplicates": True,
+        "default_policy": "pol_abc123"
+    }
+)
+
+print(f"Imported: {result.created}")
+print(f"Skipped: {result.skipped}")
+```
+
+</CodeGroup>
+
+### Upload from File
+
+```javascript
+import fs from 'fs';
+
+// Upload from JSON file
+const data = JSON.parse(fs.readFileSync('content.json', 'utf8'));
+const result = await raily.content.bulkCreate({
+  items: data.items,
+  options: { skipDuplicates: true }
+});
+
+// Or use the upload endpoint for CSV
+const csvFile = fs.createReadStream('content.csv');
+const uploadResult = await raily.content.upload({
+  file: csvFile,
+  format: 'csv',
+  options: {
+    skipDuplicates: true,
+    columnMapping: {
+      'Article ID': 'externalId',
+      'Title': 'title',
+      'URL': 'source'
+    }
+  }
+});
+```
+
+---
+
+## CMS Integrations
+
+Raily integrates with popular CMS platforms for automatic content sync.
+
+### WordPress
+
+<Steps>
+  <Step title="Install the Plugin">
+    Download the Raily WordPress plugin from your dashboard or search "Raily" in the WordPress plugin directory.
+  </Step>
+  <Step title="Configure API Key">
+    Go to **Settings > Raily** and enter your API key.
+  </Step>
+  <Step title="Select Content Types">
+    Choose which post types to sync (posts, pages, custom types).
+  </Step>
+  <Step title="Enable Auto-Sync">
+    Toggle on automatic sync to push content changes in real-time.
+  </Step>
+</Steps>
+
+```php
+// WordPress filter to customize content metadata
+add_filter('raily_content_metadata', function($metadata, $post) {
+    return array_merge($metadata, [
+        'premium' => get_post_meta($post->ID, 'is_premium', true),
+        'series' => get_the_terms($post->ID, 'series'),
+    ]);
+}, 10, 2);
+```
+
+### Contentful
+
+```javascript
+// Contentful webhook handler
+import { createClient } from 'contentful';
+import Raily from '@raily/sdk';
+
+const contentful = createClient({
+  space: process.env.CONTENTFUL_SPACE_ID,
+  accessToken: process.env.CONTENTFUL_ACCESS_TOKEN,
+});
+
+const raily = new Raily({
+  apiKey: process.env.RAILY_SECRET_KEY,
+});
+
+// Sync a Contentful entry to Raily
+async function syncEntry(entryId) {
+  const entry = await contentful.getEntry(entryId);
+
+  await raily.content.upsert({
+    externalId: entry.sys.id,
+    title: entry.fields.title,
+    type: 'article',
+    source: `https://yoursite.com/articles/${entry.fields.slug}`,
+    metadata: {
+      author: entry.fields.author?.fields?.name,
+      publishedAt: entry.sys.createdAt,
+      updatedAt: entry.sys.updatedAt,
+    }
+  });
+}
+```
+
+### Strapi
+
+```javascript
+// Strapi lifecycle hook
+module.exports = {
+  async afterCreate(event) {
+    const { result } = event;
+    await syncToRaily(result);
+  },
+
+  async afterUpdate(event) {
+    const { result } = event;
+    await syncToRaily(result);
+  },
+};
+
+async function syncToRaily(article) {
+  await raily.content.upsert({
+    externalId: `strapi-${article.id}`,
+    title: article.title,
+    type: 'article',
+    source: `https://yoursite.com/blog/${article.slug}`,
+    metadata: {
+      author: article.author?.name,
+      category: article.category?.name,
+    }
+  });
+}
+```
+
+---
+
+## Content Updates
+
+Keep your content in sync with these update strategies.
+
+### Single Update
+
+```javascript
+await raily.content.update('cnt_abc123', {
+  title: "Updated Title",
+  metadata: {
+    lastModified: new Date().toISOString(),
+    version: 2
+  }
+});
+```
+
+### Upsert (Create or Update)
+
+```javascript
+// Creates if doesn't exist, updates if it does
+await raily.content.upsert({
+  externalId: "article-123",
+  title: "My Article",
+  type: "article",
+  source: "https://example.com/article"
+});
+```
+
+### Bulk Update
+
+```javascript
+await raily.content.bulkUpdate({
+  filter: {
+    type: "article",
+    "metadata.category": "News"
+  },
+  update: {
+    policyId: "pol_news_policy"
+  }
+});
+```
+
+---
+
+## Content Validation
+
+Raily validates content before ingestion. Here are common validation errors:
+
+<AccordionGroup>
+  <Accordion title="Invalid URL" icon="link-slash">
+    **Error**: `source must be a valid URL`
+
+    **Solution**: Ensure the source field contains a properly formatted URL including the protocol (https://).
+
+    ```javascript
+    // Wrong
+    source: "example.com/article"
+
+    // Correct
+    source: "https://example.com/article"
+    ```
+  </Accordion>
+
+  <Accordion title="Duplicate External ID" icon="clone">
+    **Error**: `Content with externalId already exists`
+
+    **Solution**: Use `upsert` instead of `create`, or use a unique external ID.
+
+    ```javascript
+    // Use upsert for create-or-update behavior
+    await raily.content.upsert({
+      externalId: "article-123",
+      // ...
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Invalid Content Type" icon="file-exclamation">
+    **Error**: `type must be one of: article, report, image, dataset, video`
+
+    **Solution**: Use one of the supported content types or contact support for custom types.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use External IDs" icon="fingerprint">
+    Always set meaningful `externalId` values that match your internal system. This makes syncing and debugging much easier.
+  </Card>
+  <Card title="Batch Operations" icon="layer-group">
+    Use bulk endpoints for large imports. Single-item calls are rate-limited to 100/minute; bulk can handle 1000 items per request.
+  </Card>
+  <Card title="Rich Metadata" icon="tags">
+    Include as much metadata as possible. This enables better filtering, analytics, and policy rules later.
+  </Card>
+  <Card title="Idempotent Imports" icon="rotate">
+    Use `upsert` with `skipDuplicates` for safe, repeatable import processes.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Access Policies" icon="shield" href="/guides/access-policies">
+    Set up policies to control access to your content.
+  </Card>
+  <Card title="Analytics" icon="chart-line" href="/guides/analytics">
+    Monitor how your content is being used.
+  </Card>
+</CardGroup>

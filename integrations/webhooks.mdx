@@ -1,0 +1,618 @@
+---
+title: "Webhooks"
+description: "Receive real-time notifications for content access events"
+---
+
+## Overview
+
+Raily webhooks notify your application in real-time when events occur, such as content access, policy violations, or analytics thresholds. Use webhooks to build reactive integrations, logging systems, and automated workflows.
+
+## Setting Up Webhooks
+
+### Create a Webhook
+
+<CodeGroup>
+
+```javascript JavaScript
+const webhook = await raily.webhooks.create({
+  url: "https://api.example.com/raily/events",
+  events: [
+    "access.granted",
+    "access.denied",
+    "content.created",
+    "content.updated"
+  ],
+  secret: "whsec_your_secret_key",  // For signature verification
+  metadata: {
+    environment: "production"
+  }
+});
+
+console.log(`Webhook created: ${webhook.id}`);
+```
+
+```python Python
+webhook = raily.webhooks.create(
+    url="https://api.example.com/raily/events",
+    events=[
+        "access.granted",
+        "access.denied",
+        "content.created",
+        "content.updated"
+    ],
+    secret="whsec_your_secret_key"
+)
+```
+
+```bash cURL
+curl -X POST https://api.raily.ai/v1/webhooks \
+  -H "Authorization: Bearer $RAILY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.example.com/raily/events",
+    "events": ["access.granted", "access.denied"],
+    "secret": "whsec_your_secret_key"
+  }'
+```
+
+</CodeGroup>
+
+### Via Dashboard
+
+<Steps>
+  <Step title="Navigate to Webhooks">
+    Go to **Settings > Webhooks** in your dashboard.
+  </Step>
+  <Step title="Add Endpoint">
+    Click **Add Endpoint** and enter your URL.
+  </Step>
+  <Step title="Select Events">
+    Choose which events to receive.
+  </Step>
+  <Step title="Copy Secret">
+    Save the webhook secret for signature verification.
+  </Step>
+</Steps>
+
+---
+
+## Event Types
+
+### Access Events
+
+| Event | Description |
+|-------|-------------|
+| `access.requested` | Access check initiated |
+| `access.granted` | Access approved by policy |
+| `access.denied` | Access blocked by policy |
+| `access.rate_limited` | Request exceeded rate limit |
+
+### Content Events
+
+| Event | Description |
+|-------|-------------|
+| `content.created` | New content registered |
+| `content.updated` | Content metadata updated |
+| `content.archived` | Content archived |
+| `content.deleted` | Content permanently deleted |
+| `content.accessed` | Content successfully retrieved |
+
+### Policy Events
+
+| Event | Description |
+|-------|-------------|
+| `policy.created` | New policy created |
+| `policy.updated` | Policy rules modified |
+| `policy.deleted` | Policy removed |
+
+### Analytics Events
+
+| Event | Description |
+|-------|-------------|
+| `analytics.threshold` | Custom threshold exceeded |
+| `analytics.daily_summary` | Daily analytics digest |
+| `analytics.weekly_summary` | Weekly analytics digest |
+
+---
+
+## Webhook Payload
+
+All webhooks follow a consistent structure:
+
+```json
+{
+  "id": "evt_abc123xyz",
+  "type": "access.granted",
+  "created": "2024-01-15T10:30:00Z",
+  "data": {
+    "contentId": "cnt_xyz789",
+    "requesterId": "partner_openai",
+    "permissions": ["full_access", "inference"],
+    "rateLimit": {
+      "remaining": 999,
+      "resetAt": "2024-01-15T11:00:00Z"
+    }
+  },
+  "metadata": {
+    "environment": "production"
+  }
+}
+```
+
+### Event-Specific Payloads
+
+<Tabs>
+  <Tab title="access.granted">
+    ```json
+    {
+      "id": "evt_abc123",
+      "type": "access.granted",
+      "created": "2024-01-15T10:30:00Z",
+      "data": {
+        "contentId": "cnt_xyz789",
+        "contentTitle": "AI Report 2024",
+        "requesterId": "partner_openai",
+        "requesterName": "OpenAI",
+        "permissions": ["full_access", "inference"],
+        "policyId": "pol_enterprise",
+        "policyName": "Enterprise Access",
+        "matchedRule": {
+          "priority": 1,
+          "action": "allow"
+        },
+        "context": {
+          "purpose": "rag",
+          "model": "gpt-4"
+        },
+        "rateLimit": {
+          "remaining": 999,
+          "limit": 1000,
+          "resetAt": "2024-01-15T11:00:00Z"
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="access.denied">
+    ```json
+    {
+      "id": "evt_def456",
+      "type": "access.denied",
+      "created": "2024-01-15T10:31:00Z",
+      "data": {
+        "contentId": "cnt_xyz789",
+        "contentTitle": "AI Report 2024",
+        "requesterId": "unknown_requester",
+        "reason": "no_valid_license",
+        "message": "A valid license is required to access this content",
+        "policyId": "pol_enterprise",
+        "matchedRule": {
+          "priority": 99,
+          "action": "deny"
+        },
+        "context": {
+          "purpose": "training"
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="content.created">
+    ```json
+    {
+      "id": "evt_ghi789",
+      "type": "content.created",
+      "created": "2024-01-15T10:32:00Z",
+      "data": {
+        "contentId": "cnt_new123",
+        "externalId": "article-456",
+        "title": "New Research Paper",
+        "type": "report",
+        "source": "https://example.com/papers/new",
+        "policyId": "pol_default",
+        "metadata": {
+          "author": "Dr. Smith",
+          "pages": 25
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="analytics.threshold">
+    ```json
+    {
+      "id": "evt_jkl012",
+      "type": "analytics.threshold",
+      "created": "2024-01-15T10:33:00Z",
+      "data": {
+        "alertId": "alert_xyz",
+        "alertName": "High Denial Rate",
+        "metric": "denial_rate",
+        "threshold": 0.1,
+        "currentValue": 0.15,
+        "period": "1h",
+        "breakdown": {
+          "totalRequests": 1000,
+          "denied": 150,
+          "topDenialReasons": [
+            { "reason": "rate_limit", "count": 100 },
+            { "reason": "no_license", "count": 50 }
+          ]
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Handling Webhooks
+
+### Express.js Example
+
+```javascript
+import express from 'express';
+import crypto from 'crypto';
+
+const app = express();
+
+// Use raw body for signature verification
+app.use('/webhooks/raily', express.raw({ type: 'application/json' }));
+
+app.post('/webhooks/raily', (req, res) => {
+  // Verify signature
+  const signature = req.headers['x-raily-signature'];
+  const timestamp = req.headers['x-raily-timestamp'];
+
+  const payload = `${timestamp}.${req.body.toString()}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.RAILY_WEBHOOK_SECRET)
+    .update(payload)
+    .digest('hex');
+
+  if (signature !== `sha256=${expectedSignature}`) {
+    console.error('Invalid webhook signature');
+    return res.status(401).send('Invalid signature');
+  }
+
+  // Check timestamp to prevent replay attacks (5 minute tolerance)
+  const eventTime = parseInt(timestamp) * 1000;
+  if (Math.abs(Date.now() - eventTime) > 300000) {
+    return res.status(401).send('Timestamp too old');
+  }
+
+  // Parse and handle event
+  const event = JSON.parse(req.body.toString());
+
+  switch (event.type) {
+    case 'access.granted':
+      handleAccessGranted(event.data);
+      break;
+    case 'access.denied':
+      handleAccessDenied(event.data);
+      break;
+    case 'content.created':
+      handleContentCreated(event.data);
+      break;
+    default:
+      console.log(`Unhandled event: ${event.type}`);
+  }
+
+  // Respond quickly
+  res.status(200).send('OK');
+});
+
+function handleAccessGranted(data) {
+  console.log(`Access granted: ${data.contentId} to ${data.requesterId}`);
+  // Log to analytics, update dashboards, etc.
+}
+
+function handleAccessDenied(data) {
+  console.log(`Access denied: ${data.contentId} - ${data.reason}`);
+  // Alert security team if suspicious
+  if (data.reason === 'policy_blocked') {
+    alertSecurityTeam(data);
+  }
+}
+
+function handleContentCreated(data) {
+  console.log(`New content: ${data.title}`);
+  // Update search index, notify team, etc.
+}
+```
+
+### Python Flask Example
+
+```python
+from flask import Flask, request, abort
+import hmac
+import hashlib
+import time
+import json
+
+app = Flask(__name__)
+
+@app.route('/webhooks/raily', methods=['POST'])
+def handle_webhook():
+    # Verify signature
+    signature = request.headers.get('X-Raily-Signature')
+    timestamp = request.headers.get('X-Raily-Timestamp')
+
+    payload = f"{timestamp}.{request.data.decode()}"
+    expected = hmac.new(
+        os.environ['RAILY_WEBHOOK_SECRET'].encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    if signature != f"sha256={expected}":
+        abort(401, 'Invalid signature')
+
+    # Check timestamp
+    event_time = int(timestamp)
+    if abs(time.time() - event_time) > 300:
+        abort(401, 'Timestamp too old')
+
+    # Handle event
+    event = json.loads(request.data)
+
+    handlers = {
+        'access.granted': handle_access_granted,
+        'access.denied': handle_access_denied,
+        'content.created': handle_content_created,
+    }
+
+    handler = handlers.get(event['type'])
+    if handler:
+        handler(event['data'])
+
+    return 'OK', 200
+
+def handle_access_granted(data):
+    print(f"Access granted: {data['contentId']}")
+
+def handle_access_denied(data):
+    print(f"Access denied: {data['reason']}")
+
+def handle_content_created(data):
+    print(f"New content: {data['title']}")
+```
+
+### Using the SDK Webhook Helper
+
+```javascript
+import { verifyWebhook } from '@raily/sdk';
+
+app.post('/webhooks/raily', express.raw({ type: 'application/json' }), (req, res) => {
+  try {
+    const event = verifyWebhook(
+      req.body,
+      req.headers['x-raily-signature'],
+      req.headers['x-raily-timestamp'],
+      process.env.RAILY_WEBHOOK_SECRET
+    );
+
+    // Event is verified, handle it
+    handleEvent(event);
+    res.status(200).send('OK');
+
+  } catch (error) {
+    console.error('Webhook verification failed:', error.message);
+    res.status(401).send('Invalid webhook');
+  }
+});
+```
+
+---
+
+## Webhook Management
+
+### List Webhooks
+
+```javascript
+const webhooks = await raily.webhooks.list();
+
+webhooks.forEach(webhook => {
+  console.log(`${webhook.id}: ${webhook.url}`);
+  console.log(`  Events: ${webhook.events.join(', ')}`);
+  console.log(`  Status: ${webhook.status}`);
+});
+```
+
+### Update Webhook
+
+```javascript
+await raily.webhooks.update('wh_abc123', {
+  events: ['access.granted', 'access.denied', 'analytics.threshold'],
+  enabled: true
+});
+```
+
+### Delete Webhook
+
+```javascript
+await raily.webhooks.delete('wh_abc123');
+```
+
+### View Delivery Logs
+
+```javascript
+const logs = await raily.webhooks.logs('wh_abc123', {
+  limit: 100,
+  status: 'failed'  // or 'success', 'all'
+});
+
+logs.forEach(log => {
+  console.log(`${log.eventId}: ${log.status} - ${log.responseCode}`);
+  if (log.error) {
+    console.log(`  Error: ${log.error}`);
+  }
+});
+```
+
+### Retry Failed Deliveries
+
+```javascript
+// Retry a specific delivery
+await raily.webhooks.retry('wh_abc123', 'delivery_xyz789');
+
+// Retry all failed deliveries in last 24h
+await raily.webhooks.retryFailed('wh_abc123', {
+  since: '24h'
+});
+```
+
+---
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Verify Signatures" icon="shield-check">
+    Always verify webhook signatures to ensure requests come from Raily.
+  </Card>
+  <Card title="Respond Quickly" icon="bolt">
+    Return 200 status immediately. Process events asynchronously.
+  </Card>
+  <Card title="Handle Retries" icon="rotate">
+    Implement idempotency. Raily retries failed deliveries.
+  </Card>
+  <Card title="Monitor Failures" icon="chart-line">
+    Set up alerts for webhook delivery failures.
+  </Card>
+</CardGroup>
+
+### Async Processing Pattern
+
+```javascript
+import Queue from 'bull';
+
+const eventQueue = new Queue('raily-events', process.env.REDIS_URL);
+
+// Webhook endpoint - responds immediately
+app.post('/webhooks/raily', express.raw({ type: 'application/json' }), async (req, res) => {
+  const event = verifyWebhook(req.body, req.headers, process.env.WEBHOOK_SECRET);
+
+  // Queue for async processing
+  await eventQueue.add(event, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 1000 }
+  });
+
+  res.status(200).send('OK');
+});
+
+// Process events asynchronously
+eventQueue.process(async (job) => {
+  const event = job.data;
+
+  switch (event.type) {
+    case 'access.granted':
+      await logToAnalytics(event.data);
+      await updateDashboard(event.data);
+      break;
+    case 'access.denied':
+      await logSecurityEvent(event.data);
+      await checkForSuspiciousActivity(event.data);
+      break;
+  }
+});
+```
+
+### Idempotency
+
+```javascript
+const processedEvents = new Set();  // Use Redis in production
+
+app.post('/webhooks/raily', async (req, res) => {
+  const event = verifyWebhook(req.body, req.headers, process.env.WEBHOOK_SECRET);
+
+  // Check if already processed
+  if (processedEvents.has(event.id)) {
+    console.log(`Duplicate event: ${event.id}`);
+    return res.status(200).send('OK');
+  }
+
+  // Process event
+  await handleEvent(event);
+
+  // Mark as processed
+  processedEvents.add(event.id);
+
+  res.status(200).send('OK');
+});
+```
+
+---
+
+## Retry Policy
+
+Raily automatically retries failed webhook deliveries:
+
+| Attempt | Delay |
+|---------|-------|
+| 1st retry | 1 minute |
+| 2nd retry | 5 minutes |
+| 3rd retry | 30 minutes |
+| 4th retry | 2 hours |
+| 5th retry | 24 hours |
+
+After 5 failed attempts, the webhook is marked as failed and you'll receive an email notification.
+
+---
+
+## Testing Webhooks
+
+### Send Test Event
+
+```javascript
+// Send a test event to your endpoint
+await raily.webhooks.test('wh_abc123', {
+  eventType: 'access.granted'
+});
+```
+
+### Local Development
+
+Use a tunneling service for local development:
+
+```bash
+# Using ngrok
+ngrok http 3000
+
+# Use the ngrok URL for your webhook
+# https://abc123.ngrok.io/webhooks/raily
+```
+
+### Webhook Simulator
+
+```javascript
+// Simulate webhook locally for testing
+import { simulateWebhook } from '@raily/sdk/testing';
+
+const mockEvent = simulateWebhook({
+  type: 'access.granted',
+  data: {
+    contentId: 'cnt_test',
+    requesterId: 'test_partner'
+  },
+  secret: 'test_secret'
+});
+
+// mockEvent includes headers and body for testing
+// {
+//   headers: { 'x-raily-signature': '...', 'x-raily-timestamp': '...' },
+//   body: '{"id":"evt_...","type":"access.granted",...}'
+// }
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Analytics" icon="chart-line" href="/guides/analytics">
+    Learn about analytics events and thresholds
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/webhooks/configure">
+    Complete webhooks API documentation
+  </Card>
+</CardGroup>

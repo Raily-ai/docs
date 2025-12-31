@@ -1,0 +1,426 @@
+---
+title: "AI Application Builders"
+sidebarTitle: "AI Applications"
+description: "Build AI applications with licensed, high-quality content"
+---
+
+## Overview
+
+Building AI applications? You need high-quality content. Raily connects you with premium content sources while ensuring you're properly licensed and compliant.
+
+<CardGroup cols={2}>
+  <Card title="Quality Content" icon="gem">
+    Access premium, curated content sources
+  </Card>
+  <Card title="Clear Licensing" icon="file-contract">
+    Know exactly what you're allowed to do
+  </Card>
+  <Card title="Simple Integration" icon="plug">
+    One API for all content sources
+  </Card>
+  <Card title="Usage Tracking" icon="chart-simple">
+    Monitor your content consumption
+  </Card>
+</CardGroup>
+
+---
+
+## Why Use Raily?
+
+### The Content Problem
+
+AI applications need quality content, but accessing it is complicated:
+
+- **Fragmented sources**: Each publisher has different APIs
+- **Unclear rights**: What can you actually do with the content?
+- **Legal risk**: Unlicensed use can result in lawsuits
+- **Quality issues**: Web scraping gets you noise, not signal
+
+### The Raily Solution
+
+Raily provides a unified API for licensed content:
+
+```javascript
+// One API for all your content needs
+const content = await raily.access.check({
+  contentId: "cnt_abc123",
+  requesterId: "my_ai_app",
+  context: {
+    purpose: "rag",
+    model: "gpt-4"
+  }
+});
+
+if (content.allowed) {
+  // Use it with confidence
+  const response = await fetch(content.contentUrl);
+  const text = await response.text();
+  // Build your RAG, chatbot, or AI feature
+}
+```
+
+---
+
+## Integration Patterns
+
+### RAG (Retrieval-Augmented Generation)
+
+Build chatbots and Q&A systems with licensed content:
+
+```javascript
+import OpenAI from 'openai';
+import Raily from '@raily/sdk';
+
+const openai = new OpenAI();
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+async function ragQuery(question, relevantContentIds) {
+  // Fetch authorized content
+  const context = [];
+
+  for (const contentId of relevantContentIds) {
+    const access = await raily.access.check({
+      contentId,
+      requesterId: process.env.APP_ID,
+      context: { purpose: "rag" }
+    });
+
+    if (access.allowed) {
+      const response = await fetch(access.contentUrl);
+      context.push(await response.text());
+    }
+  }
+
+  // Generate response
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      {
+        role: "system",
+        content: `Answer based on this context:\n\n${context.join('\n\n---\n\n')}`
+      },
+      { role: "user", content: question }
+    ]
+  });
+
+  return completion.choices[0].message.content;
+}
+```
+
+### Search Enhancement
+
+Enhance search results with licensed snippets:
+
+```javascript
+async function enhancedSearch(query) {
+  // Your existing search
+  const results = await yourSearchEngine.search(query);
+
+  // Enhance with Raily content
+  const enhanced = await Promise.all(
+    results.map(async (result) => {
+      if (result.railyContentId) {
+        const access = await raily.access.check({
+          contentId: result.railyContentId,
+          requesterId: process.env.APP_ID,
+          context: { purpose: "search_enhancement" }
+        });
+
+        if (access.allowed) {
+          const content = await fetchPreview(access.contentUrl, 500);
+          return { ...result, preview: content };
+        }
+      }
+      return result;
+    })
+  );
+
+  return enhanced;
+}
+```
+
+### Content Summarization
+
+Summarize articles with proper licensing:
+
+```javascript
+async function summarizeArticle(contentId) {
+  const access = await raily.access.check({
+    contentId,
+    requesterId: process.env.APP_ID,
+    context: { purpose: "summarization" }
+  });
+
+  if (!access.allowed) {
+    throw new Error(`Access denied: ${access.reason}`);
+  }
+
+  // Check permissions
+  if (!access.permissions.includes("full_access")) {
+    throw new Error("Summarization requires full content access");
+  }
+
+  const response = await fetch(access.contentUrl);
+  const article = await response.text();
+
+  const summary = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      { role: "system", content: "Summarize this article in 3 bullet points:" },
+      { role: "user", content: article }
+    ]
+  });
+
+  return summary.choices[0].message.content;
+}
+```
+
+---
+
+## Understanding Permissions
+
+When you check access, the response tells you what you can do:
+
+```javascript
+const access = await raily.access.check({
+  contentId: "cnt_abc123",
+  requesterId: "my_app",
+  context: { purpose: "rag" }
+});
+
+// Check what you're allowed to do
+console.log(access.permissions);
+// ["full_access", "inference"]
+
+// Check rate limits
+console.log(access.rateLimit);
+// { remaining: 950, limit: 1000, resetAt: "2024-01-15T11:00:00Z" }
+```
+
+### Permission Types
+
+| Permission | What It Allows |
+|------------|----------------|
+| `full_access` | Access complete content |
+| `preview_only` | Access first ~500 characters |
+| `metadata_only` | Access title, author, date only |
+| `inference` | Use for AI inference/RAG |
+| `training` | Use for model training |
+| `commercial_use` | Use in commercial products |
+
+---
+
+## Handling Rate Limits
+
+Respect rate limits to maintain access:
+
+```javascript
+async function withRateLimitHandling(contentId) {
+  const access = await raily.access.check({
+    contentId,
+    requesterId: process.env.APP_ID,
+    context: { purpose: "rag" }
+  });
+
+  if (!access.allowed) {
+    if (access.reason === "rate_limit_exceeded") {
+      // Wait and retry
+      const waitMs = (new Date(access.retryAfter) - new Date());
+      console.log(`Rate limited, waiting ${waitMs}ms`);
+      await sleep(waitMs);
+      return withRateLimitHandling(contentId);  // Retry
+    }
+    throw new Error(access.reason);
+  }
+
+  return access;
+}
+```
+
+### Monitor Your Usage
+
+```javascript
+const usage = await raily.analytics.usage({
+  period: "24h"
+});
+
+console.log(`Requests today: ${usage.summary.totalRequests}`);
+console.log(`Remaining in current period: ${usage.rateLimit?.remaining}`);
+```
+
+---
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Cache Tokens" icon="clock">
+    Access tokens are valid for a period. Cache and reuse them.
+  </Card>
+  <Card title="Batch When Possible" icon="layer-group">
+    Check access for multiple items in fewer API calls.
+  </Card>
+  <Card title="Handle Denials" icon="shield-xmark">
+    Always have fallback content when access is denied.
+  </Card>
+  <Card title="Track Purposes" icon="tag">
+    Use accurate purpose tags for better analytics.
+  </Card>
+</CardGroup>
+
+### Caching Pattern
+
+```javascript
+const tokenCache = new Map();
+
+async function getCachedAccess(contentId) {
+  const cacheKey = `${contentId}_${process.env.APP_ID}`;
+
+  // Check cache
+  const cached = tokenCache.get(cacheKey);
+  if (cached && new Date(cached.expiresAt) > new Date()) {
+    return cached;
+  }
+
+  // Fetch new access
+  const access = await raily.access.check({
+    contentId,
+    requesterId: process.env.APP_ID,
+    context: { purpose: "rag" }
+  });
+
+  if (access.allowed) {
+    tokenCache.set(cacheKey, access);
+  }
+
+  return access;
+}
+```
+
+---
+
+## Sample Application: Research Assistant
+
+Complete example of an AI research assistant:
+
+```javascript
+import Raily from '@raily/sdk';
+import OpenAI from 'openai';
+
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+const openai = new OpenAI();
+
+class ResearchAssistant {
+  constructor(appId) {
+    this.appId = appId;
+    this.accessCache = new Map();
+  }
+
+  async research(query) {
+    // 1. Find relevant content (your search logic)
+    const relevantIds = await this.searchRelevantContent(query);
+
+    // 2. Get authorized content
+    const authorizedContent = await this.getAuthorizedContent(relevantIds);
+
+    if (authorizedContent.length === 0) {
+      return {
+        answer: "I couldn't find any accessible content for this query.",
+        sources: []
+      };
+    }
+
+    // 3. Generate answer
+    const answer = await this.generateAnswer(query, authorizedContent);
+
+    return {
+      answer,
+      sources: authorizedContent.map(c => ({
+        title: c.title,
+        url: c.sourceUrl
+      }))
+    };
+  }
+
+  async getAuthorizedContent(contentIds) {
+    const authorized = [];
+
+    for (const id of contentIds) {
+      try {
+        const access = await raily.access.check({
+          contentId: id,
+          requesterId: this.appId,
+          context: { purpose: "research_assistant" }
+        });
+
+        if (access.allowed && access.permissions.includes("full_access")) {
+          const response = await fetch(access.contentUrl);
+          const content = await response.text();
+          authorized.push({
+            id,
+            content,
+            title: access.metadata?.title,
+            sourceUrl: access.metadata?.source
+          });
+        }
+      } catch (error) {
+        console.error(`Error checking access for ${id}:`, error);
+      }
+    }
+
+    return authorized;
+  }
+
+  async generateAnswer(query, content) {
+    const context = content
+      .map(c => `Source: ${c.title}\n${c.content}`)
+      .join('\n\n---\n\n');
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: `You are a research assistant. Answer questions based on the provided sources. Always cite your sources.
+
+Sources:
+${context}`
+        },
+        { role: "user", content: query }
+      ]
+    });
+
+    return completion.choices[0].message.content;
+  }
+
+  async searchRelevantContent(query) {
+    // Implement your search logic
+    // This could use embeddings, keywords, etc.
+    return ["cnt_abc", "cnt_def", "cnt_ghi"];
+  }
+}
+
+// Usage
+const assistant = new ResearchAssistant("research_assistant_v1");
+const result = await assistant.research("What are the latest AI trends?");
+console.log(result.answer);
+console.log("Sources:", result.sources);
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get API Keys" icon="key" href="https://raily.ai/contact">
+    Sign up for developer access
+  </Card>
+  <Card title="SDKs" icon="code" href="/sdks/overview">
+    Use our official libraries
+  </Card>
+  <Card title="LLM Integrations" icon="robot" href="/integrations/llm-providers">
+    OpenAI, Anthropic, and more
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Complete API documentation
+  </Card>
+</CardGroup>

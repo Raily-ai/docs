@@ -1,0 +1,597 @@
+---
+title: "CMS Platform Integrations"
+sidebarTitle: "CMS Platforms"
+description: "Sync your content from WordPress, Contentful, Strapi, and more"
+---
+
+## Overview
+
+Raily integrates with popular content management systems to automatically sync your content. Keep your Raily catalog up-to-date without manual imports.
+
+<CardGroup cols={3}>
+  <Card title="WordPress" icon="wordpress">
+    Plugin-based integration
+  </Card>
+  <Card title="Contentful" icon="cube">
+    Webhook + API
+  </Card>
+  <Card title="Strapi" icon="feather">
+    Lifecycle hooks
+  </Card>
+</CardGroup>
+
+---
+
+## WordPress
+
+### Plugin Installation
+
+<Steps>
+  <Step title="Install Plugin">
+    Search for "Raily" in WordPress Plugins or download from your Raily dashboard.
+  </Step>
+  <Step title="Activate">
+    Activate the plugin from **Plugins > Installed Plugins**.
+  </Step>
+  <Step title="Configure">
+    Go to **Settings > Raily** and enter your API key.
+  </Step>
+  <Step title="Select Content">
+    Choose which post types to sync (posts, pages, custom types).
+  </Step>
+</Steps>
+
+### Configuration Options
+
+```php
+// wp-config.php or plugin settings
+
+// Required: API Key
+define('RAILY_API_KEY', 'raily_sk_xxxxx');
+
+// Optional: Customize behavior
+define('RAILY_AUTO_SYNC', true);        // Sync on publish
+define('RAILY_SYNC_DRAFTS', false);     // Include drafts
+define('RAILY_DEFAULT_POLICY', 'pol_xxx'); // Default policy ID
+```
+
+### Customizing Synced Data
+
+```php
+// functions.php
+
+// Add custom metadata to synced content
+add_filter('raily_content_metadata', function($metadata, $post) {
+    return array_merge($metadata, [
+        'premium' => get_post_meta($post->ID, '_is_premium', true),
+        'author_bio' => get_the_author_meta('description', $post->post_author),
+        'reading_time' => calculate_reading_time($post->post_content),
+        'categories' => wp_get_post_categories($post->ID, ['fields' => 'names']),
+    ]);
+}, 10, 2);
+
+// Customize which posts get synced
+add_filter('raily_should_sync', function($should_sync, $post) {
+    // Only sync posts with 'sync-to-raily' tag
+    if (!has_tag('sync-to-raily', $post)) {
+        return false;
+    }
+
+    // Don't sync posts older than 1 year
+    $post_date = strtotime($post->post_date);
+    if ($post_date < strtotime('-1 year')) {
+        return false;
+    }
+
+    return $should_sync;
+}, 10, 2);
+
+// Map post types to Raily content types
+add_filter('raily_content_type', function($type, $post) {
+    $type_map = [
+        'post' => 'article',
+        'page' => 'page',
+        'product' => 'product',
+        'whitepaper' => 'report',
+    ];
+
+    return $type_map[$post->post_type] ?? 'article';
+}, 10, 2);
+
+// Assign policies based on post data
+add_filter('raily_content_policy', function($policy_id, $post) {
+    if (get_post_meta($post->ID, '_is_premium', true)) {
+        return 'pol_premium';
+    }
+    if (has_category('free', $post)) {
+        return 'pol_free';
+    }
+    return $policy_id;  // Default policy
+}, 10, 2);
+```
+
+### Manual Sync
+
+```php
+// Programmatically sync a post
+do_action('raily_sync_post', $post_id);
+
+// Bulk sync all posts
+$posts = get_posts(['post_type' => 'post', 'numberposts' => -1]);
+foreach ($posts as $post) {
+    do_action('raily_sync_post', $post->ID);
+}
+
+// Remove from Raily
+do_action('raily_remove_post', $post_id);
+```
+
+### WP-CLI Commands
+
+```bash
+# Sync all posts
+wp raily sync --all
+
+# Sync specific post
+wp raily sync --post_id=123
+
+# Sync by post type
+wp raily sync --post_type=product
+
+# Check sync status
+wp raily status
+
+# Remove content from Raily
+wp raily remove --post_id=123
+```
+
+---
+
+## Contentful
+
+### Webhook Setup
+
+<Steps>
+  <Step title="Go to Settings">
+    In Contentful, navigate to **Settings > Webhooks**.
+  </Step>
+  <Step title="Add Webhook">
+    Click **Add Webhook** and configure:
+    - **URL**: `https://api.raily.ai/v1/webhooks/contentful`
+    - **Triggers**: Entry publish, unpublish, delete
+  </Step>
+  <Step title="Add Headers">
+    Add header: `X-Raily-API-Key: your_api_key`
+  </Step>
+  <Step title="Test">
+    Use Contentful's test feature to verify connectivity.
+  </Step>
+</Steps>
+
+### Custom Integration
+
+```javascript
+// contentful-raily-sync.js
+import { createClient } from 'contentful-management';
+import Raily from '@raily/sdk';
+
+const contentful = createClient({
+  accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN
+});
+
+const raily = new Raily({
+  apiKey: process.env.RAILY_API_KEY
+});
+
+// Sync a single entry
+async function syncEntry(spaceId, environmentId, entryId) {
+  const space = await contentful.getSpace(spaceId);
+  const environment = await space.getEnvironment(environmentId);
+  const entry = await environment.getEntry(entryId);
+
+  // Skip drafts
+  if (!entry.isPublished()) {
+    console.log(`Skipping draft: ${entryId}`);
+    return;
+  }
+
+  const fields = entry.fields;
+
+  await raily.content.upsert({
+    externalId: `contentful-${entry.sys.id}`,
+    title: fields.title?.['en-US'] || 'Untitled',
+    type: mapContentType(entry.sys.contentType.sys.id),
+    source: buildContentUrl(entry),
+    metadata: {
+      contentfulId: entry.sys.id,
+      contentType: entry.sys.contentType.sys.id,
+      locale: 'en-US',
+      createdAt: entry.sys.createdAt,
+      updatedAt: entry.sys.updatedAt,
+      author: fields.author?.['en-US']?.sys?.id,
+      tags: fields.tags?.['en-US'] || []
+    }
+  });
+
+  console.log(`Synced: ${entry.sys.id}`);
+}
+
+// Map Contentful types to Raily types
+function mapContentType(contentfulType) {
+  const mapping = {
+    'blogPost': 'article',
+    'whitepaper': 'report',
+    'caseStudy': 'report',
+    'newsArticle': 'article'
+  };
+  return mapping[contentfulType] || 'article';
+}
+
+// Build public URL for content
+function buildContentUrl(entry) {
+  const slug = entry.fields.slug?.['en-US'];
+  const type = entry.sys.contentType.sys.id;
+
+  const paths = {
+    'blogPost': 'blog',
+    'whitepaper': 'resources',
+    'caseStudy': 'case-studies'
+  };
+
+  return `https://yoursite.com/${paths[type] || 'content'}/${slug}`;
+}
+
+// Webhook handler (Express)
+app.post('/webhooks/contentful', async (req, res) => {
+  const { sys, fields } = req.body;
+
+  try {
+    if (req.headers['x-contentful-topic'].includes('publish')) {
+      await syncEntry(sys.space.sys.id, sys.environment.sys.id, sys.id);
+    } else if (req.headers['x-contentful-topic'].includes('unpublish')) {
+      await raily.content.archive(`contentful-${sys.id}`);
+    } else if (req.headers['x-contentful-topic'].includes('delete')) {
+      await raily.content.delete(`contentful-${sys.id}`);
+    }
+
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).send('Error');
+  }
+});
+```
+
+### Bulk Sync Script
+
+```javascript
+// sync-all-contentful.js
+async function syncAllContent() {
+  const space = await contentful.getSpace(process.env.CONTENTFUL_SPACE_ID);
+  const environment = await space.getEnvironment('master');
+
+  // Get all published entries
+  const entries = await environment.getEntries({
+    limit: 1000,
+    'sys.publishedAt[exists]': true
+  });
+
+  console.log(`Found ${entries.items.length} entries to sync`);
+
+  for (const entry of entries.items) {
+    try {
+      await syncEntry(
+        process.env.CONTENTFUL_SPACE_ID,
+        'master',
+        entry.sys.id
+      );
+    } catch (error) {
+      console.error(`Failed to sync ${entry.sys.id}:`, error.message);
+    }
+  }
+
+  console.log('Bulk sync complete');
+}
+
+syncAllContent();
+```
+
+---
+
+## Strapi
+
+### Plugin Installation
+
+```bash
+# Install Raily Strapi plugin
+npm install strapi-plugin-raily
+```
+
+### Configuration
+
+```javascript
+// config/plugins.js
+module.exports = {
+  raily: {
+    enabled: true,
+    config: {
+      apiKey: process.env.RAILY_API_KEY,
+      autoSync: true,
+      contentTypes: ['article', 'report', 'page'],
+      defaultPolicy: 'pol_default'
+    }
+  }
+};
+```
+
+### Lifecycle Hooks
+
+```javascript
+// src/api/article/content-types/article/lifecycles.js
+const Raily = require('@raily/sdk');
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+module.exports = {
+  async afterCreate(event) {
+    const { result } = event;
+
+    if (result.publishedAt) {
+      await syncToRaily(result);
+    }
+  },
+
+  async afterUpdate(event) {
+    const { result } = event;
+
+    if (result.publishedAt) {
+      await syncToRaily(result);
+    } else {
+      // Unpublished - archive in Raily
+      await raily.content.archive(`strapi-article-${result.id}`);
+    }
+  },
+
+  async afterDelete(event) {
+    const { result } = event;
+    await raily.content.delete(`strapi-article-${result.id}`);
+  }
+};
+
+async function syncToRaily(article) {
+  await raily.content.upsert({
+    externalId: `strapi-article-${article.id}`,
+    title: article.title,
+    type: 'article',
+    source: `https://yoursite.com/articles/${article.slug}`,
+    metadata: {
+      strapiId: article.id,
+      author: article.author?.name,
+      category: article.category?.name,
+      publishedAt: article.publishedAt,
+      excerpt: article.excerpt
+    },
+    policyId: article.premium ? 'pol_premium' : 'pol_free'
+  });
+}
+```
+
+### Custom Controller
+
+```javascript
+// src/api/article/controllers/article.js
+module.exports = {
+  // Bulk sync endpoint
+  async syncToRaily(ctx) {
+    const articles = await strapi.entityService.findMany('api::article.article', {
+      filters: { publishedAt: { $notNull: true } },
+      populate: ['author', 'category']
+    });
+
+    const results = { synced: 0, failed: 0, errors: [] };
+
+    for (const article of articles) {
+      try {
+        await syncToRaily(article);
+        results.synced++;
+      } catch (error) {
+        results.failed++;
+        results.errors.push({ id: article.id, error: error.message });
+      }
+    }
+
+    ctx.body = results;
+  }
+};
+```
+
+---
+
+## Sanity
+
+```javascript
+// sanity-raily-sync.js
+import { createClient } from '@sanity/client';
+import Raily from '@raily/sdk';
+
+const sanity = createClient({
+  projectId: process.env.SANITY_PROJECT_ID,
+  dataset: 'production',
+  useCdn: false,
+  token: process.env.SANITY_TOKEN
+});
+
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+// Listen for changes
+const subscription = sanity.listen('*[_type == "post"]').subscribe(update => {
+  if (update.transition === 'appear' || update.transition === 'update') {
+    syncDocument(update.result);
+  } else if (update.transition === 'disappear') {
+    raily.content.delete(`sanity-${update.documentId}`);
+  }
+});
+
+async function syncDocument(doc) {
+  await raily.content.upsert({
+    externalId: `sanity-${doc._id}`,
+    title: doc.title,
+    type: 'article',
+    source: `https://yoursite.com/posts/${doc.slug.current}`,
+    metadata: {
+      sanityId: doc._id,
+      author: doc.author?._ref,
+      publishedAt: doc.publishedAt,
+      categories: doc.categories?.map(c => c._ref)
+    }
+  });
+}
+
+// Bulk sync
+async function bulkSync() {
+  const posts = await sanity.fetch('*[_type == "post"]');
+
+  for (const post of posts) {
+    await syncDocument(post);
+  }
+}
+```
+
+---
+
+## Ghost
+
+```javascript
+// ghost-raily-sync.js
+import GhostContentAPI from '@tryghost/content-api';
+import GhostAdminAPI from '@tryghost/admin-api';
+import Raily from '@raily/sdk';
+
+const ghost = new GhostAdminAPI({
+  url: process.env.GHOST_URL,
+  key: process.env.GHOST_ADMIN_KEY,
+  version: 'v5.0'
+});
+
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+// Webhook handler
+app.post('/webhooks/ghost', async (req, res) => {
+  const { post } = req.body;
+
+  if (post.current?.status === 'published') {
+    await raily.content.upsert({
+      externalId: `ghost-${post.current.id}`,
+      title: post.current.title,
+      type: 'article',
+      source: post.current.url,
+      metadata: {
+        ghostId: post.current.id,
+        slug: post.current.slug,
+        author: post.current.primary_author?.name,
+        tags: post.current.tags?.map(t => t.name),
+        excerpt: post.current.excerpt,
+        readingTime: post.current.reading_time
+      }
+    });
+  } else if (post.previous?.status === 'published') {
+    // Was published, now unpublished
+    await raily.content.archive(`ghost-${post.current.id}`);
+  }
+
+  res.status(200).send('OK');
+});
+```
+
+---
+
+## Generic Webhook Handler
+
+For any CMS that supports webhooks:
+
+```javascript
+// generic-webhook-handler.js
+import Raily from '@raily/sdk';
+import crypto from 'crypto';
+
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+// Generic webhook endpoint
+app.post('/webhooks/cms', async (req, res) => {
+  // Verify webhook signature if provided
+  const signature = req.headers['x-webhook-signature'];
+  if (signature) {
+    const expected = crypto
+      .createHmac('sha256', process.env.WEBHOOK_SECRET)
+      .update(JSON.stringify(req.body))
+      .digest('hex');
+
+    if (signature !== expected) {
+      return res.status(401).send('Invalid signature');
+    }
+  }
+
+  const { event, data } = req.body;
+
+  try {
+    switch (event) {
+      case 'content.created':
+      case 'content.updated':
+      case 'content.published':
+        await raily.content.upsert({
+          externalId: data.id,
+          title: data.title,
+          type: data.type || 'article',
+          source: data.url,
+          metadata: data.metadata || {}
+        });
+        break;
+
+      case 'content.unpublished':
+        await raily.content.archive(data.id);
+        break;
+
+      case 'content.deleted':
+        await raily.content.delete(data.id);
+        break;
+
+      default:
+        console.log(`Unknown event: ${event}`);
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+---
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use External IDs" icon="fingerprint">
+    Always use consistent external IDs that map to your CMS's unique identifiers.
+  </Card>
+  <Card title="Sync Metadata" icon="tags">
+    Include rich metadata for better filtering, analytics, and policy rules.
+  </Card>
+  <Card title="Handle All Events" icon="list-check">
+    Implement handlers for create, update, publish, unpublish, and delete.
+  </Card>
+  <Card title="Retry Failed Syncs" icon="rotate">
+    Implement retry logic for failed syncs with exponential backoff.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
+    Learn about Raily's outbound webhooks
+  </Card>
+  <Card title="Content Ingestion" icon="upload" href="/guides/content-ingestion">
+    More content import options
+  </Card>
+</CardGroup>

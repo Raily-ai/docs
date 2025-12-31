@@ -1,0 +1,153 @@
+---
+title: "Update Content"
+api: "PATCH /v1/content/{id}"
+description: "Update an existing content item"
+---
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The content ID (e.g., `cnt_abc123`) or external ID
+</ParamField>
+
+## Request Body
+
+All fields are optional. Only provided fields will be updated.
+
+<ParamField body="title" type="string">
+  Updated title
+</ParamField>
+
+<ParamField body="source" type="string">
+  Updated source URL
+</ParamField>
+
+<ParamField body="policyId" type="string">
+  New policy ID to apply
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Updated metadata. Merges with existing metadata by default.
+</ParamField>
+
+<ParamField body="metadataReplace" type="boolean" default="false">
+  If true, replaces all metadata instead of merging
+</ParamField>
+
+<ParamField body="tags" type="array">
+  Updated tags array (replaces existing tags)
+</ParamField>
+
+<ParamField body="status" type="string">
+  Content status: `active` or `archived`
+</ParamField>
+
+## Response
+
+Returns the updated content object.
+
+<RequestExample>
+
+```bash cURL
+curl -X PATCH https://api.raily.ai/v1/content/cnt_abc123xyz \
+  -H "Authorization: Bearer raily_sk_xxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Updated: Introduction to AI",
+    "policyId": "pol_enterprise",
+    "metadata": {
+      "featured": true,
+      "lastReviewed": "2024-01-20"
+    }
+  }'
+```
+
+```javascript JavaScript
+const content = await raily.content.update('cnt_abc123xyz', {
+  title: 'Updated: Introduction to AI',
+  policyId: 'pol_enterprise',
+  metadata: {
+    featured: true,
+    lastReviewed: '2024-01-20'
+  }
+});
+
+console.log(`Updated: ${content.title}`);
+```
+
+```python Python
+content = raily.content.update(
+    "cnt_abc123xyz",
+    title="Updated: Introduction to AI",
+    policy_id="pol_enterprise",
+    metadata={
+        "featured": True,
+        "last_reviewed": "2024-01-20"
+    }
+)
+
+print(f"Updated: {content.title}")
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success (200)
+{
+  "id": "cnt_abc123xyz",
+  "object": "content",
+  "externalId": "article-123",
+  "title": "Updated: Introduction to AI",
+  "type": "article",
+  "source": "https://example.com/articles/ai-intro",
+  "policyId": "pol_enterprise",
+  "metadata": {
+    "author": "Jane Smith",
+    "category": "Technology",
+    "publishedAt": "2024-01-15",
+    "wordCount": 2500,
+    "featured": true,
+    "lastReviewed": "2024-01-20"
+  },
+  "status": "active",
+  "created": "2024-01-15T10:30:00Z",
+  "updated": "2024-01-20T14:00:00Z"
+}
+```
+
+```json Not Found (404)
+{
+  "error": {
+    "code": "content_not_found",
+    "message": "Content with ID 'cnt_invalid' not found",
+    "type": "not_found_error"
+  }
+}
+```
+
+</ResponseExample>
+
+## Archive Content
+
+To archive content (disable access while preserving data):
+
+```javascript
+await raily.content.update('cnt_abc123xyz', {
+  status: 'archived'
+});
+```
+
+## Upsert (Create or Update)
+
+Use the upsert endpoint to create content if it doesn't exist, or update if it does:
+
+```javascript
+const content = await raily.content.upsert({
+  externalId: 'article-123',
+  title: 'Introduction to AI',
+  type: 'article',
+  source: 'https://example.com/articles/ai-intro'
+});
+// Creates if externalId doesn't exist, updates if it does
+```

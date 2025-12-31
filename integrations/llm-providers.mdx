@@ -1,0 +1,526 @@
+---
+title: "LLM Provider Integrations"
+sidebarTitle: "LLM Providers"
+description: "Integrate Raily with OpenAI, Anthropic, Google, and other AI providers"
+---
+
+## Overview
+
+Raily sits between your content and AI systems, ensuring every access is authorized, tracked, and monetized. This guide shows how to integrate Raily with popular LLM providers.
+
+<CardGroup cols={4}>
+  <Card title="OpenAI" icon="wand-magic-sparkles">
+    GPT-4, GPT-3.5
+  </Card>
+  <Card title="Anthropic" icon="comment">
+    Claude 3
+  </Card>
+  <Card title="Google" icon="google">
+    Gemini
+  </Card>
+  <Card title="Custom" icon="code">
+    Any LLM
+  </Card>
+</CardGroup>
+
+---
+
+## OpenAI Integration
+
+### Basic RAG Pattern
+
+```javascript
+import OpenAI from 'openai';
+import Raily from '@raily/sdk';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+async function ragQuery(userQuestion, relevantContentIds) {
+  // Step 1: Check access and fetch authorized content
+  const contextParts = [];
+
+  for (const contentId of relevantContentIds) {
+    const access = await raily.access.check({
+      contentId,
+      requesterId: process.env.APP_ID,
+      context: {
+        purpose: "rag",
+        model: "gpt-4"
+      }
+    });
+
+    if (access.allowed) {
+      const response = await fetch(access.contentUrl, {
+        headers: { Authorization: `Bearer ${access.token}` }
+      });
+      const content = await response.text();
+      contextParts.push(content);
+    }
+  }
+
+  if (contextParts.length === 0) {
+    return "I don't have access to relevant information to answer your question.";
+  }
+
+  // Step 2: Query OpenAI with authorized content
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      {
+        role: "system",
+        content: `You are a helpful assistant. Use the following context to answer questions:\n\n${contextParts.join('\n\n---\n\n')}`
+      },
+      {
+        role: "user",
+        content: userQuestion
+      }
+    ]
+  });
+
+  return completion.choices[0].message.content;
+}
+
+// Usage
+const answer = await ragQuery(
+  "What are the key trends in AI for 2024?",
+  ["cnt_report_2024", "cnt_industry_analysis"]
+);
+```
+
+### With Embeddings
+
+```javascript
+import OpenAI from 'openai';
+import Raily from '@raily/sdk';
+
+const openai = new OpenAI();
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+async function semanticSearch(query, contentIds) {
+  // Get query embedding
+  const queryEmbedding = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: query
+  });
+
+  // Search and filter by access
+  const results = [];
+
+  for (const contentId of contentIds) {
+    const access = await raily.access.check({
+      contentId,
+      requesterId: process.env.APP_ID,
+      context: { purpose: "inference" }
+    });
+
+    if (access.allowed) {
+      // Fetch content and its embedding
+      const content = await fetchContent(access.contentUrl, access.token);
+      const similarity = cosineSimilarity(
+        queryEmbedding.data[0].embedding,
+        content.embedding
+      );
+
+      results.push({
+        contentId,
+        content: content.text,
+        similarity
+      });
+    }
+  }
+
+  // Return top results
+  return results
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, 5);
+}
+```
+
+### Assistants API
+
+```javascript
+import OpenAI from 'openai';
+import Raily from '@raily/sdk';
+
+const openai = new OpenAI();
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+// Create an assistant with Raily-protected knowledge
+async function createAssistantWithProtectedKnowledge(contentIds) {
+  // Verify access to all content
+  const authorizedContent = [];
+
+  for (const id of contentIds) {
+    const access = await raily.access.check({
+      contentId: id,
+      requesterId: "openai_assistant",
+      context: { purpose: "assistant_knowledge" }
+    });
+
+    if (access.allowed) {
+      const response = await fetch(access.contentUrl);
+      const content = await response.text();
+      authorizedContent.push({ id, content });
+    }
+  }
+
+  // Upload authorized content as files
+  const fileIds = [];
+  for (const item of authorizedContent) {
+    const file = await openai.files.create({
+      file: new Blob([item.content], { type: 'text/plain' }),
+      purpose: 'assistants'
+    });
+    fileIds.push(file.id);
+  }
+
+  // Create assistant with files
+  const assistant = await openai.beta.assistants.create({
+    name: "Knowledge Assistant",
+    model: "gpt-4-turbo-preview",
+    tools: [{ type: "retrieval" }],
+    file_ids: fileIds
+  });
+
+  return assistant;
+}
+```
+
+---
+
+## Anthropic Integration
+
+### Basic Chat with Context
+
+```javascript
+import Anthropic from '@anthropic-ai/sdk';
+import Raily from '@raily/sdk';
+
+const anthropic = new Anthropic();
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+async function chatWithContext(userMessage, contentId) {
+  // Check access
+  const access = await raily.access.check({
+    contentId,
+    requesterId: "anthropic_app",
+    context: {
+      purpose: "inference",
+      model: "claude-3-opus"
+    }
+  });
+
+  if (!access.allowed) {
+    return {
+      success: false,
+      error: `Access denied: ${access.reason}`
+    };
+  }
+
+  // Fetch authorized content
+  const response = await fetch(access.contentUrl, {
+    headers: { Authorization: `Bearer ${access.token}` }
+  });
+  const contextContent = await response.text();
+
+  // Query Claude
+  const message = await anthropic.messages.create({
+    model: "claude-3-opus-20240229",
+    max_tokens: 4096,
+    system: `You have access to the following reference material. Use it to provide accurate, well-informed responses:\n\n${contextContent}`,
+    messages: [
+      { role: "user", content: userMessage }
+    ]
+  });
+
+  return {
+    success: true,
+    response: message.content[0].text,
+    usage: {
+      inputTokens: message.usage.input_tokens,
+      outputTokens: message.usage.output_tokens
+    }
+  };
+}
+```
+
+### Streaming Responses
+
+```javascript
+async function streamingChatWithContent(userMessage, contentId) {
+  const access = await raily.access.check({
+    contentId,
+    requesterId: "anthropic_streaming_app",
+    context: { purpose: "inference" }
+  });
+
+  if (!access.allowed) {
+    throw new Error(access.reason);
+  }
+
+  const contextResponse = await fetch(access.contentUrl);
+  const context = await contextResponse.text();
+
+  const stream = await anthropic.messages.create({
+    model: "claude-3-sonnet-20240229",
+    max_tokens: 1024,
+    stream: true,
+    system: `Context: ${context}`,
+    messages: [{ role: "user", content: userMessage }]
+  });
+
+  // Return async iterator
+  return stream;
+}
+
+// Usage with streaming
+const stream = await streamingChatWithContent(
+  "Summarize the key findings",
+  "cnt_research_paper"
+);
+
+for await (const event of stream) {
+  if (event.type === 'content_block_delta') {
+    process.stdout.write(event.delta.text);
+  }
+}
+```
+
+---
+
+## Google Gemini Integration
+
+```javascript
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import Raily from '@raily/sdk';
+
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+async function geminiWithRaily(prompt, contentIds) {
+  // Gather authorized content
+  const contextParts = [];
+
+  for (const contentId of contentIds) {
+    const access = await raily.access.check({
+      contentId,
+      requesterId: "gemini_app",
+      context: { purpose: "inference", model: "gemini-pro" }
+    });
+
+    if (access.allowed) {
+      const response = await fetch(access.contentUrl);
+      contextParts.push(await response.text());
+    }
+  }
+
+  // Query Gemini
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+  const result = await model.generateContent({
+    contents: [{
+      role: "user",
+      parts: [{
+        text: `Context:\n${contextParts.join('\n\n---\n\n')}\n\nQuestion: ${prompt}`
+      }]
+    }]
+  });
+
+  return result.response.text();
+}
+```
+
+---
+
+## LangChain Integration
+
+### Custom Retriever
+
+```python
+from langchain.schema import BaseRetriever, Document
+from raily import Raily
+import requests
+
+class RailyRetriever(BaseRetriever):
+    """Custom retriever that uses Raily for access control."""
+
+    def __init__(self, content_ids: list[str], requester_id: str):
+        self.content_ids = content_ids
+        self.requester_id = requester_id
+        self.raily = Raily(api_key=os.environ["RAILY_API_KEY"])
+
+    def get_relevant_documents(self, query: str) -> list[Document]:
+        documents = []
+
+        for content_id in self.content_ids:
+            access = self.raily.access.check(
+                content_id=content_id,
+                requester_id=self.requester_id,
+                context={"purpose": "rag", "query": query}
+            )
+
+            if access.allowed:
+                response = requests.get(
+                    access.content_url,
+                    headers={"Authorization": f"Bearer {access.token}"}
+                )
+                documents.append(Document(
+                    page_content=response.text,
+                    metadata={"content_id": content_id}
+                ))
+
+        return documents
+
+    async def aget_relevant_documents(self, query: str) -> list[Document]:
+        # Async implementation
+        return self.get_relevant_documents(query)
+```
+
+### RAG Chain
+
+```python
+from langchain.chains import RetrievalQA
+from langchain.llms import OpenAI
+
+# Create Raily-powered retriever
+retriever = RailyRetriever(
+    content_ids=["cnt_doc1", "cnt_doc2", "cnt_doc3"],
+    requester_id="langchain_app"
+)
+
+# Build RAG chain
+qa_chain = RetrievalQA.from_chain_type(
+    llm=OpenAI(temperature=0),
+    chain_type="stuff",
+    retriever=retriever,
+    return_source_documents=True
+)
+
+# Query
+result = qa_chain({"query": "What are the main conclusions?"})
+print(result["result"])
+print(f"Sources: {[doc.metadata['content_id'] for doc in result['source_documents']]}")
+```
+
+---
+
+## LlamaIndex Integration
+
+```python
+from llama_index import VectorStoreIndex, Document
+from llama_index.retrievers import BaseRetriever
+from raily import Raily
+
+class RailyDocumentLoader:
+    """Load documents through Raily access control."""
+
+    def __init__(self, requester_id: str):
+        self.raily = Raily(api_key=os.environ["RAILY_API_KEY"])
+        self.requester_id = requester_id
+
+    def load(self, content_ids: list[str]) -> list[Document]:
+        documents = []
+
+        for content_id in content_ids:
+            access = self.raily.access.check(
+                content_id=content_id,
+                requester_id=self.requester_id,
+                context={"purpose": "indexing"}
+            )
+
+            if access.allowed:
+                response = requests.get(access.content_url)
+                documents.append(Document(
+                    text=response.text,
+                    metadata={"source": content_id}
+                ))
+
+        return documents
+
+# Usage
+loader = RailyDocumentLoader(requester_id="llamaindex_app")
+documents = loader.load(["cnt_1", "cnt_2", "cnt_3"])
+
+# Create index
+index = VectorStoreIndex.from_documents(documents)
+query_engine = index.as_query_engine()
+
+response = query_engine.query("What are the key insights?")
+print(response)
+```
+
+---
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Cache Access Tokens" icon="clock">
+    Access tokens are valid for a period. Cache and reuse them to reduce API calls.
+  </Card>
+  <Card title="Batch Requests" icon="layer-group">
+    Check access for multiple content items in a single request when possible.
+  </Card>
+  <Card title="Handle Denials Gracefully" icon="shield-xmark">
+    Always handle access denials gracefully with fallback responses.
+  </Card>
+  <Card title="Track Usage Context" icon="chart-simple">
+    Provide detailed context (model, purpose) for better analytics and policy matching.
+  </Card>
+</CardGroup>
+
+### Error Handling Pattern
+
+```javascript
+async function safeContentAccess(contentId, requesterId) {
+  try {
+    const access = await raily.access.check({
+      contentId,
+      requesterId,
+      context: { purpose: "inference" }
+    });
+
+    if (!access.allowed) {
+      console.log(`Access denied: ${access.reason}`);
+      return {
+        success: false,
+        reason: access.reason,
+        retryAfter: access.retryAfter
+      };
+    }
+
+    const response = await fetch(access.contentUrl, {
+      headers: { Authorization: `Bearer ${access.token}` }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.status}`);
+    }
+
+    return {
+      success: true,
+      content: await response.text(),
+      expiresAt: access.expiresAt
+    };
+
+  } catch (error) {
+    console.error('Raily access error:', error);
+    return {
+      success: false,
+      reason: 'internal_error',
+      error: error.message
+    };
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CMS Platforms" icon="newspaper" href="/integrations/cms-platforms">
+    Sync content from your CMS
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
+    Real-time event notifications
+  </Card>
+</CardGroup>

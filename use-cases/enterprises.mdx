@@ -1,0 +1,383 @@
+---
+title: "Enterprise Knowledge"
+sidebarTitle: "Enterprises"
+description: "Secure enterprise content for internal AI applications"
+---
+
+## Overview
+
+Enterprises have vast knowledge bases—internal documentation, research, reports, and proprietary data. Raily helps you make this content AI-ready while maintaining security and compliance.
+
+<CardGroup cols={2}>
+  <Card title="Secure Access" icon="lock">
+    Control which AI tools can access sensitive content
+  </Card>
+  <Card title="Audit Trail" icon="file-lines">
+    Complete logging for compliance requirements
+  </Card>
+  <Card title="Department Control" icon="building">
+    Different policies for different teams
+  </Card>
+  <Card title="Internal AI Apps" icon="robot">
+    Power your internal AI tools safely
+  </Card>
+</CardGroup>
+
+---
+
+## The Challenge
+
+Enterprises want to leverage AI for productivity, but face significant hurdles:
+
+- **Security concerns**: Sensitive data could leak through AI systems
+- **Compliance requirements**: GDPR, HIPAA, SOC 2 require audit trails
+- **Department silos**: Different teams have different access needs
+- **Shadow AI**: Employees using unauthorized AI tools
+
+---
+
+## The Raily Solution
+
+### 1. Secure Your Knowledge Base
+
+Register internal content with appropriate classifications:
+
+```javascript
+// Register internal documentation
+await raily.content.create({
+  externalId: "internal-doc-456",
+  title: "Q4 Financial Report",
+  type: "report",
+  source: "sharepoint://documents/finance/q4-report",
+  metadata: {
+    classification: "confidential",
+    department: "finance",
+    owner: "cfo@company.com",
+    retentionDate: "2027-01-01"
+  }
+});
+```
+
+### 2. Create Department-Based Policies
+
+<Tabs>
+  <Tab title="HR Documents">
+    ```javascript
+    const hrPolicy = await raily.policies.create({
+      name: "HR Confidential",
+      rules: [
+        {
+          action: "allow",
+          conditions: {
+            requesterType: "internal_app",
+            requesterTags: ["hr_access"],
+            "content.metadata.department": "hr"
+          },
+          permissions: ["full_access"]
+        },
+        {
+          action: "deny",
+          conditions: { default: true },
+          message: "HR documents require HR system access"
+        }
+      ]
+    });
+    ```
+  </Tab>
+  <Tab title="Engineering Docs">
+    ```javascript
+    const engineeringPolicy = await raily.policies.create({
+      name: "Engineering Knowledge Base",
+      rules: [
+        {
+          action: "allow",
+          conditions: {
+            requesterType: "internal_app",
+            requesterTags: ["engineering"]
+          },
+          permissions: ["full_access"],
+          rateLimit: { requests: 1000, period: "hour" }
+        },
+        // Allow limited access to other internal apps
+        {
+          action: "allow",
+          priority: 2,
+          conditions: { requesterType: "internal_app" },
+          permissions: ["metadata_only"]
+        }
+      ]
+    });
+    ```
+  </Tab>
+  <Tab title="Executive Reports">
+    ```javascript
+    const execPolicy = await raily.policies.create({
+      name: "Executive Only",
+      rules: [
+        {
+          action: "allow",
+          conditions: {
+            requesterId: ["exec_assistant_ai"],
+            "content.metadata.classification": "executive"
+          },
+          permissions: ["full_access"]
+        },
+        {
+          action: "deny",
+          conditions: { default: true },
+          message: "Executive content restricted"
+        }
+      ]
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### 3. Build Compliant AI Applications
+
+Create internal AI tools that respect access controls:
+
+```javascript
+// Internal chatbot that respects Raily policies
+async function askInternalAI(question, userId, department) {
+  // Get relevant documents based on user's department
+  const relevantDocs = await searchKnowledgeBase(question);
+
+  // Check access for each document through Raily
+  const authorizedDocs = [];
+  for (const doc of relevantDocs) {
+    const access = await raily.access.check({
+      contentId: doc.railyId,
+      requesterId: `internal_${department}_app`,
+      context: {
+        purpose: "inference",
+        userId: userId,
+        department: department
+      }
+    });
+
+    if (access.allowed) {
+      const content = await fetch(access.contentUrl);
+      authorizedDocs.push(await content.text());
+    }
+  }
+
+  // Use only authorized content
+  const response = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      {
+        role: "system",
+        content: `Answer based only on this context:\n${authorizedDocs.join('\n\n')}`
+      },
+      { role: "user", content: question }
+    ]
+  });
+
+  return response.choices[0].message.content;
+}
+```
+
+---
+
+## Real-World Examples
+
+### Financial Services Firm
+
+**Challenge**: A financial services firm wanted to create an AI assistant for advisors while ensuring client data stayed protected.
+
+**Solution**:
+- Registered all client documents with strict policies
+- Created role-based access (advisor, compliance, executive)
+- Implemented comprehensive audit logging
+- Built internal AI assistant with Raily integration
+
+**Results**:
+- Advisors 40% more efficient with AI-powered research
+- Zero data leakage incidents
+- Complete audit trail for compliance
+- Passed SOC 2 audit with flying colors
+
+### Healthcare Organization
+
+**Challenge**: A healthcare organization needed to make research documents accessible to AI tools while maintaining HIPAA compliance.
+
+**Solution**:
+- De-identified research data before registration
+- Created separate policies for clinical vs. administrative
+- Implemented strict access logging
+- Set up alerts for unusual access patterns
+
+**Results**:
+- Researchers can use AI tools safely
+- HIPAA compliance maintained
+- Audit-ready access logs
+- 60% reduction in manual research time
+
+---
+
+## Compliance Features
+
+### Complete Audit Trail
+
+Every access request is logged with full context:
+
+```javascript
+const logs = await raily.access.logs({
+  contentId: "cnt_sensitive_doc",
+  period: "30d"
+});
+
+logs.forEach(log => {
+  console.log(`${log.timestamp}: ${log.requesterId}`);
+  console.log(`  Action: ${log.action} (${log.allowed ? 'ALLOWED' : 'DENIED'})`);
+  console.log(`  Context: ${JSON.stringify(log.context)}`);
+  console.log(`  Policy: ${log.policyId}, Rule: ${log.matchedRule}`);
+});
+```
+
+### Data Residency
+
+Configure where your data is processed:
+
+```javascript
+await raily.settings.update({
+  dataResidency: "eu",  // or "us", "apac"
+  encryptionKey: "your-kms-key-arn"  // BYOK support
+});
+```
+
+### Integration with Identity Providers
+
+Connect with your existing SSO:
+
+```javascript
+// Okta integration example
+const railyRequesterId = await mapOktaUserToRaily(oktaUserId);
+
+const access = await raily.access.check({
+  contentId: docId,
+  requesterId: railyRequesterId,
+  context: {
+    authProvider: "okta",
+    groups: oktaUser.groups,
+    mfaVerified: true
+  }
+});
+```
+
+---
+
+## Implementation Guide
+
+<Steps>
+  <Step title="Inventory Content">
+    Catalog your internal knowledge bases and classify by sensitivity.
+  </Step>
+  <Step title="Map Access Requirements">
+    Document who needs access to what, and under what conditions.
+  </Step>
+  <Step title="Create Policies">
+    Build policies that reflect your access requirements.
+  </Step>
+  <Step title="Integrate Identity">
+    Connect Raily with your identity provider.
+  </Step>
+  <Step title="Build AI Apps">
+    Create internal AI tools that use Raily for access control.
+  </Step>
+  <Step title="Monitor & Audit">
+    Set up monitoring, alerts, and regular access reviews.
+  </Step>
+</Steps>
+
+---
+
+## Sample Policy: Enterprise Knowledge
+
+```javascript
+// Complete enterprise knowledge base setup
+const setupEnterpriseKB = async () => {
+  // Public knowledge (company wiki, public docs)
+  const publicPolicy = await raily.policies.create({
+    name: "Public Knowledge",
+    rules: [{
+      action: "allow",
+      conditions: {
+        requesterType: "internal_app",
+        "content.metadata.classification": "public"
+      },
+      permissions: ["full_access"]
+    }]
+  });
+
+  // Internal only (employee handbook, processes)
+  const internalPolicy = await raily.policies.create({
+    name: "Internal Only",
+    rules: [{
+      action: "allow",
+      conditions: {
+        requesterType: "internal_app",
+        "content.metadata.classification": "internal"
+      },
+      permissions: ["full_access"],
+      rateLimit: { requests: 500, period: "hour" }
+    }]
+  });
+
+  // Confidential (client data, financials)
+  const confidentialPolicy = await raily.policies.create({
+    name: "Confidential",
+    rules: [
+      {
+        action: "allow",
+        priority: 1,
+        conditions: {
+          requesterType: "internal_app",
+          "context.department": { in: ["${content.metadata.ownerDept}"] },
+          "context.mfaVerified": true
+        },
+        permissions: ["full_access"]
+      },
+      {
+        action: "deny",
+        priority: 99,
+        conditions: { default: true }
+      }
+    ]
+  });
+
+  // Set up alerts for sensitive access
+  await raily.alerts.create({
+    name: "Confidential Access Alert",
+    condition: {
+      event: "access.granted",
+      filter: { "content.metadata.classification": "confidential" }
+    },
+    actions: [
+      { type: "webhook", url: "https://siem.company.com/alerts" }
+    ]
+  });
+
+  return { publicPolicy, internalPolicy, confidentialPolicy };
+};
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Security Best Practices" icon="shield" href="/guides/access-policies">
+    Learn about policy configuration
+  </Card>
+  <Card title="SSO Integration" icon="key" href="/integrations/overview">
+    Connect your identity provider
+  </Card>
+  <Card title="Compliance" icon="check" href="/guides/analytics">
+    Set up audit logging
+  </Card>
+  <Card title="Contact Sales" icon="envelope" href="https://raily.ai/contact">
+    Discuss enterprise deployment
+  </Card>
+</CardGroup>

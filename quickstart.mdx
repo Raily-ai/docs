@@ -1,80 +1,405 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get up and running with Raily in under 10 minutes"
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through integrating Raily into your application. By the end, you'll have:
 
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+- Connected your content to Raily
+- Created your first access policy
+- Made your first API call
+- Viewed analytics in the dashboard
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  **Prerequisites**: You'll need a Raily account to follow this guide. [Sign up here](https://raily.ai/contact) if you haven't already.
 </Note>
+
+## Step 1: Get Your API Keys
+
+After signing up, navigate to the **API Keys** section in your dashboard.
+
+<Steps>
+  <Step title="Access the Dashboard">
+    Log in to your Raily dashboard at `dashboard.raily.ai`
+  </Step>
+  <Step title="Generate API Keys">
+    Click **Create API Key** and give it a descriptive name like "Development" or "Production"
+  </Step>
+  <Step title="Copy Your Keys">
+    You'll receive two keys:
+    - **Public Key**: Safe to use in client-side code
+    - **Secret Key**: Keep this secure, use only in server-side code
+  </Step>
+</Steps>
+
+<Warning>
+  Never expose your secret key in client-side code, public repositories, or logs. Treat it like a password.
+</Warning>
+
+## Step 2: Install the SDK
+
+Choose your preferred language:
+
+<CodeGroup>
+
+```bash npm
+npm install @raily/sdk
+```
+
+```bash yarn
+yarn add @raily/sdk
+```
+
+```bash pnpm
+pnpm add @raily/sdk
+```
+
+```bash pip
+pip install raily
+```
+
+</CodeGroup>
+
+## Step 3: Initialize the Client
+
+<CodeGroup>
+
+```javascript JavaScript
+import Raily from '@raily/sdk';
+
+const raily = new Raily({
+  apiKey: process.env.RAILY_SECRET_KEY,
+});
+```
+
+```python Python
+from raily import Raily
+
+raily = Raily(api_key=os.environ["RAILY_SECRET_KEY"])
+```
+
+```bash cURL
+# Set your API key as an environment variable
+export RAILY_API_KEY="your_secret_key_here"
+
+# All API requests include the Authorization header
+curl -H "Authorization: Bearer $RAILY_API_KEY" \
+  https://api.raily.ai/v1/content
+```
+
+</CodeGroup>
+
+## Step 4: Add Your First Content
+
+Let's register some content with Raily. This creates a reference that AI systems can request access to.
+
+<CodeGroup>
+
+```javascript JavaScript
+const content = await raily.content.create({
+  externalId: "article-123",
+  title: "Understanding AI Content Licensing",
+  type: "article",
+  source: "https://example.com/articles/ai-licensing",
+  metadata: {
+    author: "Jane Smith",
+    publishedAt: "2024-01-15",
+    category: "Technology",
+    wordCount: 2500
+  }
+});
+
+console.log(`Content registered: ${content.id}`);
+// Output: Content registered: cnt_abc123xyz
+```
+
+```python Python
+content = raily.content.create(
+    external_id="article-123",
+    title="Understanding AI Content Licensing",
+    type="article",
+    source="https://example.com/articles/ai-licensing",
+    metadata={
+        "author": "Jane Smith",
+        "published_at": "2024-01-15",
+        "category": "Technology",
+        "word_count": 2500
+    }
+)
+
+print(f"Content registered: {content.id}")
+# Output: Content registered: cnt_abc123xyz
+```
+
+```bash cURL
+curl -X POST https://api.raily.ai/v1/content \
+  -H "Authorization: Bearer $RAILY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "externalId": "article-123",
+    "title": "Understanding AI Content Licensing",
+    "type": "article",
+    "source": "https://example.com/articles/ai-licensing",
+    "metadata": {
+      "author": "Jane Smith",
+      "publishedAt": "2024-01-15",
+      "category": "Technology",
+      "wordCount": 2500
+    }
+  }'
+```
+
+</CodeGroup>
+
+<Tip>
+  Use `externalId` to link Raily content to your existing content management system. This makes it easy to sync and manage content across platforms.
+</Tip>
+
+## Step 5: Create an Access Policy
+
+Policies control how AI systems can access your content. Let's create a simple policy that allows access to licensed partners.
+
+<CodeGroup>
+
+```javascript JavaScript
+const policy = await raily.policies.create({
+  name: "Licensed Partners Only",
+  description: "Allow access to partners with valid licenses",
+  rules: [
+    {
+      action: "allow",
+      conditions: {
+        hasValidLicense: true,
+        licenseType: ["enterprise", "professional"]
+      },
+      rateLimit: {
+        requests: 1000,
+        period: "hour"
+      }
+    },
+    {
+      action: "deny",
+      conditions: { default: true },
+      message: "A valid license is required to access this content"
+    }
+  ]
+});
+
+// Apply the policy to your content
+await raily.content.update(content.id, {
+  policyId: policy.id
+});
+```
+
+```python Python
+policy = raily.policies.create(
+    name="Licensed Partners Only",
+    description="Allow access to partners with valid licenses",
+    rules=[
+        {
+            "action": "allow",
+            "conditions": {
+                "has_valid_license": True,
+                "license_type": ["enterprise", "professional"]
+            },
+            "rate_limit": {
+                "requests": 1000,
+                "period": "hour"
+            }
+        },
+        {
+            "action": "deny",
+            "conditions": {"default": True},
+            "message": "A valid license is required to access this content"
+        }
+    ]
+)
+
+# Apply the policy to your content
+raily.content.update(content.id, policy_id=policy.id)
+```
+
+</CodeGroup>
+
+## Step 6: Test Content Access
+
+Now let's simulate an AI system requesting access to your content:
+
+<CodeGroup>
+
+```javascript JavaScript
+// Simulate a request from an AI partner
+const accessRequest = await raily.access.check({
+  contentId: content.id,
+  requesterId: "partner_openai",
+  context: {
+    purpose: "training",
+    model: "gpt-4"
+  }
+});
+
+if (accessRequest.allowed) {
+  console.log("Access granted!");
+  console.log(`Content URL: ${accessRequest.contentUrl}`);
+  console.log(`Expires: ${accessRequest.expiresAt}`);
+} else {
+  console.log(`Access denied: ${accessRequest.reason}`);
+}
+```
+
+```python Python
+# Simulate a request from an AI partner
+access_request = raily.access.check(
+    content_id=content.id,
+    requester_id="partner_openai",
+    context={
+        "purpose": "training",
+        "model": "gpt-4"
+    }
+)
+
+if access_request.allowed:
+    print("Access granted!")
+    print(f"Content URL: {access_request.content_url}")
+    print(f"Expires: {access_request.expires_at}")
+else:
+    print(f"Access denied: {access_request.reason}")
+```
+
+</CodeGroup>
+
+## Step 7: View Analytics
+
+Check your dashboard to see real-time analytics, or fetch them programmatically:
+
+<CodeGroup>
+
+```javascript JavaScript
+const analytics = await raily.analytics.usage({
+  contentId: content.id,
+  period: "7d"
+});
+
+console.log(`Total requests: ${analytics.totalRequests}`);
+console.log(`Allowed: ${analytics.allowed}`);
+console.log(`Denied: ${analytics.denied}`);
+console.log(`Top requesters:`, analytics.topRequesters);
+
+// Example output:
+// Total requests: 1,247
+// Allowed: 1,102
+// Denied: 145
+// Top requesters: [
+//   { id: "partner_openai", requests: 823 },
+//   { id: "partner_anthropic", requests: 279 }
+// ]
+```
+
+```python Python
+analytics = raily.analytics.usage(
+    content_id=content.id,
+    period="7d"
+)
+
+print(f"Total requests: {analytics.total_requests}")
+print(f"Allowed: {analytics.allowed}")
+print(f"Denied: {analytics.denied}")
+print(f"Top requesters: {analytics.top_requesters}")
+```
+
+</CodeGroup>
+
+## Complete Example
+
+Here's a complete example bringing everything together:
+
+```javascript JavaScript
+import Raily from '@raily/sdk';
+
+const raily = new Raily({
+  apiKey: process.env.RAILY_SECRET_KEY,
+});
+
+async function setupContentMonetization() {
+  // 1. Register content
+  const content = await raily.content.create({
+    externalId: "premium-report-2024",
+    title: "2024 AI Industry Report",
+    type: "report",
+    source: "https://example.com/reports/ai-2024",
+    metadata: {
+      price: 499,
+      pages: 150,
+      category: "Research"
+    }
+  });
+
+  // 2. Create tiered access policy
+  const policy = await raily.policies.create({
+    name: "Tiered Access",
+    rules: [
+      {
+        action: "allow",
+        priority: 1,
+        conditions: { licenseType: "enterprise" },
+        permissions: ["full_access", "commercial_use"]
+      },
+      {
+        action: "allow",
+        priority: 2,
+        conditions: { licenseType: "professional" },
+        permissions: ["full_access"],
+        rateLimit: { requests: 500, period: "day" }
+      },
+      {
+        action: "allow",
+        priority: 3,
+        conditions: { licenseType: "basic" },
+        permissions: ["preview_only"],
+        rateLimit: { requests: 50, period: "day" }
+      },
+      {
+        action: "deny",
+        conditions: { default: true }
+      }
+    ]
+  });
+
+  // 3. Apply policy
+  await raily.content.update(content.id, { policyId: policy.id });
+
+  // 4. Set up webhook for access events
+  await raily.webhooks.create({
+    url: "https://api.example.com/raily/events",
+    events: ["access.granted", "access.denied", "content.accessed"]
+  });
+
+  console.log("Content monetization setup complete!");
+  return { content, policy };
+}
+
+setupContentMonetization();
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Core Concepts" icon="book" href="/core-concepts">
+    Learn about content, policies, and access control in depth.
+  </Card>
+  <Card title="Content Ingestion" icon="upload" href="/guides/content-ingestion">
+    Bulk import content from your CMS or data sources.
+  </Card>
+  <Card title="Policy Templates" icon="file-code" href="/guides/access-policies">
+    Explore pre-built policy templates for common use cases.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Complete API documentation with all endpoints.
+  </Card>
+</CardGroup>
+
+<Check>
+  **Congratulations!** You've successfully integrated Raily. Your content is now protected, tracked, and ready to generate revenue from AI applications.
+</Check>

@@ -1,0 +1,310 @@
+---
+title: "Publishers & Media"
+sidebarTitle: "Publishers"
+description: "How publishers monetize content with AI systems using Raily"
+---
+
+## Overview
+
+Publishers and media companies are sitting on valuable content that AI systems want to access. Raily helps you monetize this content while maintaining control over how it's used.
+
+<CardGroup cols={2}>
+  <Card title="Content Control" icon="shield">
+    Decide exactly which AI systems can access your content
+  </Card>
+  <Card title="New Revenue" icon="coins">
+    Create a new revenue stream from AI licensing
+  </Card>
+  <Card title="Usage Visibility" icon="chart-line">
+    See exactly how your content is being used
+  </Card>
+  <Card title="Rights Protection" icon="copyright">
+    Enforce your licensing terms automatically
+  </Card>
+</CardGroup>
+
+---
+
+## The Challenge
+
+AI companies are training models and building applications using publisher content. Without proper controls:
+
+- You don't know who's using your content
+- You can't enforce licensing terms
+- You miss out on significant revenue opportunities
+- Your content may be used in ways you didn't authorize
+
+---
+
+## The Raily Solution
+
+### 1. Register Your Content Catalog
+
+Connect your CMS to automatically sync your article archive:
+
+```javascript
+// WordPress integration
+add_filter('raily_content_metadata', function($metadata, $post) {
+    return array_merge($metadata, [
+        'author' => get_the_author(),
+        'section' => get_the_category()[0]->name,
+        'premium' => get_post_meta($post->ID, '_premium_content', true),
+        'wordCount' => str_word_count($post->post_content)
+    ]);
+}, 10, 2);
+```
+
+### 2. Create Tiered Access Policies
+
+<Tabs>
+  <Tab title="Free Content">
+    Allow broad access to non-premium content:
+
+    ```javascript
+    const freePolicy = await raily.policies.create({
+      name: "Free Content",
+      rules: [
+        {
+          action: "allow",
+          conditions: { "content.metadata.premium": false },
+          permissions: ["full_access", "inference"],
+          rateLimit: { requests: 100, period: "day" }
+        }
+      ]
+    });
+    ```
+  </Tab>
+  <Tab title="Premium Content">
+    Require licensing for premium articles:
+
+    ```javascript
+    const premiumPolicy = await raily.policies.create({
+      name: "Premium Content",
+      rules: [
+        {
+          action: "allow",
+          priority: 1,
+          conditions: {
+            hasValidLicense: true,
+            licenseType: ["enterprise", "news"]
+          },
+          permissions: ["full_access", "inference"]
+        },
+        {
+          action: "deny",
+          priority: 99,
+          conditions: { default: true },
+          message: "Contact licensing@yourpublication.com for access"
+        }
+      ]
+    });
+    ```
+  </Tab>
+  <Tab title="Archive Content">
+    Special terms for historical content:
+
+    ```javascript
+    const archivePolicy = await raily.policies.create({
+      name: "Archive Access",
+      rules: [
+        {
+          action: "allow",
+          conditions: {
+            licenseType: "archive",
+            "content.metadata.publishedAt": { before: "2020-01-01" }
+          },
+          permissions: ["full_access", "training"]
+        }
+      ]
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### 3. Block Training Without License
+
+Many publishers want to allow inference (chatbots citing their work) but block training (using content to train models):
+
+```javascript
+const noTrainingPolicy = await raily.policies.create({
+  name: "Inference Only",
+  rules: [
+    // Block all training
+    {
+      action: "deny",
+      priority: 1,
+      conditions: { purpose: ["training", "fine_tuning"] },
+      message: "Training use requires a separate license"
+    },
+    // Allow inference for licensed partners
+    {
+      action: "allow",
+      priority: 2,
+      conditions: {
+        hasValidLicense: true,
+        purpose: ["inference", "rag"]
+      },
+      permissions: ["full_access"]
+    }
+  ]
+});
+```
+
+---
+
+## Real-World Examples
+
+### News Organization
+
+**Challenge**: A major news organization wanted to monetize their 20-year article archive while blocking unauthorized AI training.
+
+**Solution**:
+- Synced 500,000+ articles to Raily via their CMS
+- Created tiered policies: free for breaking news, licensed for archive
+- Blocked training use without explicit contracts
+- Set up revenue tracking and automated reporting
+
+**Results**:
+- $2M+ new annual revenue from AI licensing
+- 100% visibility into content usage
+- Zero unauthorized training access
+
+### Magazine Publisher
+
+**Challenge**: A magazine publisher wanted to offer their premium content to AI applications while maintaining exclusivity.
+
+**Solution**:
+- Registered premium content with restrictive policies
+- Created exclusive partnerships with 3 AI providers
+- Implemented rate limits to control access volume
+- Set up webhooks for real-time monitoring
+
+**Results**:
+- Exclusive AI partnerships generating recurring revenue
+- Complete control over which AI systems use their content
+- Real-time alerts for any policy violations
+
+---
+
+## Implementation Guide
+
+<Steps>
+  <Step title="Audit Your Content">
+    Identify your content tiers: free, premium, archive, exclusive.
+  </Step>
+  <Step title="Connect Your CMS">
+    Install the Raily plugin or set up API integration.
+  </Step>
+  <Step title="Define Policies">
+    Create policies for each content tier and use case.
+  </Step>
+  <Step title="Engage AI Partners">
+    Reach out to AI companies with your licensing offer.
+  </Step>
+  <Step title="Monitor & Optimize">
+    Track usage and revenue, adjust policies as needed.
+  </Step>
+</Steps>
+
+---
+
+## Sample Policy: News Publisher
+
+```javascript
+// Complete policy setup for a news publisher
+const setupNewsPublisher = async () => {
+  // Free content - recent news
+  const freePolicy = await raily.policies.create({
+    name: "Free News",
+    rules: [
+      {
+        action: "allow",
+        conditions: {
+          "content.metadata.section": "breaking-news",
+          "content.metadata.publishedAt": { after: "now-7d" }
+        },
+        permissions: ["full_access", "inference"],
+        rateLimit: { requests: 50, period: "day" }
+      }
+    ]
+  });
+
+  // Premium content - analysis & investigations
+  const premiumPolicy = await raily.policies.create({
+    name: "Premium Analysis",
+    rules: [
+      {
+        action: "allow",
+        priority: 1,
+        conditions: {
+          hasValidLicense: true,
+          licenseFeatures: ["premium_access"]
+        },
+        permissions: ["full_access", "inference"]
+      },
+      {
+        action: "allow",
+        priority: 2,
+        conditions: { hasValidLicense: true },
+        permissions: ["preview_only"]  // 500 char preview
+      }
+    ]
+  });
+
+  // Archive - training allowed with specific license
+  const archivePolicy = await raily.policies.create({
+    name: "Archive Training",
+    rules: [
+      {
+        action: "allow",
+        conditions: {
+          licenseType: "training",
+          "content.metadata.publishedAt": { before: "now-1y" }
+        },
+        permissions: ["full_access", "training", "fine_tuning"]
+      }
+    ]
+  });
+
+  return { freePolicy, premiumPolicy, archivePolicy };
+};
+```
+
+---
+
+## Revenue Tracking
+
+Monitor your AI licensing revenue:
+
+```javascript
+const monthlyReport = await raily.analytics.revenue({
+  period: "month",
+  groupBy: "day"
+});
+
+console.log(`Monthly Revenue: $${monthlyReport.summary.total}`);
+console.log(`Growth vs Last Month: ${monthlyReport.summary.changePercent}%`);
+console.log(`\nTop Partners:`);
+monthlyReport.byRequester.forEach(partner => {
+  console.log(`  ${partner.name}: $${partner.revenue}`);
+});
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get Started" icon="rocket" href="/quickstart">
+    Set up Raily in 10 minutes
+  </Card>
+  <Card title="CMS Integration" icon="plug" href="/integrations/cms-platforms">
+    Connect your content management system
+  </Card>
+  <Card title="Access Policies" icon="shield" href="/guides/access-policies">
+    Learn about policy configuration
+  </Card>
+  <Card title="Contact Sales" icon="envelope" href="https://raily.ai/contact">
+    Discuss enterprise licensing
+  </Card>
+</CardGroup>

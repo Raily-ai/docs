@@ -1,0 +1,79 @@
+---
+title: "Configure Webhooks"
+api: "POST /v1/webhooks"
+description: "Create a new webhook endpoint"
+---
+
+## Request Body
+
+<ParamField body="url" type="string" required>
+  The HTTPS URL to receive webhook events
+</ParamField>
+
+<ParamField body="events" type="array" required>
+  Events to subscribe to
+</ParamField>
+
+<ParamField body="secret" type="string">
+  Secret for signature verification (auto-generated if not provided)
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Custom metadata
+</ParamField>
+
+## Available Events
+
+| Event | Description |
+|-------|-------------|
+| `access.granted` | Content access approved |
+| `access.denied` | Content access blocked |
+| `access.rate_limited` | Rate limit exceeded |
+| `content.created` | New content registered |
+| `content.updated` | Content updated |
+| `content.deleted` | Content deleted |
+| `policy.created` | Policy created |
+| `policy.updated` | Policy updated |
+| `analytics.threshold` | Analytics threshold exceeded |
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://api.raily.ai/v1/webhooks \
+  -H "Authorization: Bearer raily_sk_xxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.example.com/webhooks/raily",
+    "events": ["access.granted", "access.denied"],
+    "secret": "whsec_your_secret"
+  }'
+```
+
+```javascript JavaScript
+const webhook = await raily.webhooks.create({
+  url: 'https://api.example.com/webhooks/raily',
+  events: ['access.granted', 'access.denied'],
+  secret: 'whsec_your_secret'
+});
+
+console.log(`Webhook ID: ${webhook.id}`);
+console.log(`Secret: ${webhook.secret}`);
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success (201)
+{
+  "id": "wh_abc123",
+  "object": "webhook",
+  "url": "https://api.example.com/webhooks/raily",
+  "events": ["access.granted", "access.denied"],
+  "secret": "whsec_your_secret",
+  "status": "active",
+  "created": "2024-01-15T10:30:00Z"
+}
+```
+
+</ResponseExample>

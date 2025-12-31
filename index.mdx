@@ -1,97 +1,127 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Welcome to Raily"
+sidebarTitle: "Introduction"
+description: "The AI-Ready Content Access Layer that transforms your content infrastructure for the AI era"
 ---
 
-## Setting up
+<img
+  className="block dark:hidden"
+  src="/images/hero-light.png"
+  alt="Raily Hero"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/hero-dark.png"
+  alt="Raily Hero"
+/>
 
-Get your documentation site up and running in minutes.
+## What is Raily?
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Raily is the **AI-Ready Content Access Layer** that helps publishers, enterprises, and content creators monetize their premium content and intellectual property in the GenAI era. We connect your data and IP to AI systems while ensuring you maintain control, visibility, and revenue.
 
-## Make it yours
+<CardGroup cols={2}>
+  <Card title="Secure Access Control" icon="shield-check">
+    Define who can access your content, when, and under what conditions. Fine-grained policies give you complete control.
+  </Card>
+  <Card title="Advanced Analytics" icon="chart-mixed">
+    Track how AI systems consume your content in real-time. Understand usage patterns and optimize your strategy.
+  </Card>
+  <Card title="Intelligent Policies" icon="brain">
+    Create sophisticated access rules that adapt to context, usage patterns, and commercial agreements.
+  </Card>
+  <Card title="Revenue Optimization" icon="money-bill-trend-up">
+    Turn your content into a scalable revenue stream with flexible licensing and usage-based billing.
+  </Card>
+</CardGroup>
 
-Design a docs site that looks great and empowers your users.
+## Get Started in Minutes
 
-<Columns cols={2}>
+<Steps>
+  <Step title="Create Your Account">
+    Sign up at [raily.ai](https://raily.ai/contact) to get your API keys and access the dashboard.
+  </Step>
+  <Step title="Connect Your Content">
+    Integrate your content sources using our SDKs or REST API. We support all major CMS platforms.
+    ```bash
+    npm install @raily/sdk
+    ```
+  </Step>
+  <Step title="Define Access Policies">
+    Set up policies to control how AI systems can access and use your content.
+    ```javascript
+    const policy = await raily.policies.create({
+      name: "Premium Content Access",
+      rules: [
+        { action: "allow", conditions: { hasLicense: true } },
+        { action: "deny", conditions: { default: true } }
+      ]
+    });
+    ```
+  </Step>
+  <Step title="Start Earning">
+    Monitor usage through the dashboard and watch as your content generates revenue.
+  </Step>
+</Steps>
+
+## Why Choose Raily?
+
+<AccordionGroup>
+  <Accordion title="Built for the AI Era" icon="robot">
+    Unlike traditional content management systems, Raily is designed from the ground up for AI consumption. We understand how LLMs and AI applications access content, and we've optimized every aspect of our platform for this new paradigm.
+  </Accordion>
+
+  <Accordion title="Enterprise-Grade Security" icon="lock">
+    Your content is your most valuable asset. Raily provides bank-grade encryption, SOC 2 compliance, and detailed audit logs. You always know who accessed what, when, and why.
+  </Accordion>
+
+  <Accordion title="Flexible Integration" icon="plug">
+    Whether you use WordPress, custom CMS, or direct API integration, Raily works with your existing infrastructure. Our SDKs for JavaScript and Python make integration a breeze.
+  </Accordion>
+
+  <Accordion title="Real-Time Insights" icon="gauge-high">
+    Don't fly blind. Our analytics dashboard shows you exactly how AI systems are using your content, which pieces are most valuable, and where your revenue is coming from.
+  </Accordion>
+</AccordionGroup>
+
+## Explore the Documentation
+
+<CardGroup cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Quickstart Guide"
+    icon="rocket"
+    href="/quickstart"
   >
-    Edit your docs locally and preview them in real time.
+    Get up and running with Raily in under 10 minutes.
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Core Concepts"
+    icon="book"
+    href="/core-concepts"
   >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+    Understand the key concepts behind Raily's architecture.
   </Card>
   <Card
-    title="API documentation"
-    icon="terminal"
+    title="API Reference"
+    icon="code"
     href="/api-reference/introduction"
   >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+    Complete API documentation with examples.
   </Card>
   <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
+    title="Use Cases"
+    icon="lightbulb"
+    href="/use-cases/publishers"
   >
-    Add sample code to demonstrate how to use your product.
+    See how others are using Raily to monetize content.
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+</CardGroup>
 
-## Need inspiration?
+## Need Help?
 
 <Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
+  title="Contact Us"
+  icon="envelope"
+  href="https://raily.ai/contact"
 >
-  Browse our showcase of exceptional documentation sites.
+  Our team is here to help you get started. Reach out for personalized guidance on implementing Raily for your use case.
 </Card>

@@ -1,0 +1,209 @@
+---
+title: "SDKs Overview"
+sidebarTitle: "Overview"
+description: "Official Raily SDKs for JavaScript and Python"
+---
+
+## Official SDKs
+
+Raily provides official SDKs to make integration easy. Our SDKs handle authentication, retries, rate limiting, and error handling automatically.
+
+<CardGroup cols={2}>
+  <Card title="JavaScript / TypeScript" icon="js" href="/sdks/javascript">
+    For Node.js, Deno, and modern JavaScript
+    ```bash
+    npm install @raily/sdk
+    ```
+  </Card>
+  <Card title="Python" icon="python" href="/sdks/python">
+    For Python 3.8+
+    ```bash
+    pip install raily
+    ```
+  </Card>
+</CardGroup>
+
+---
+
+## Quick Comparison
+
+| Feature | JavaScript | Python |
+|---------|------------|--------|
+| Async/Await | Yes | Yes |
+| TypeScript Types | Built-in | Type hints |
+| Auto-retry | Yes | Yes |
+| Rate Limit Handling | Automatic | Automatic |
+| Streaming | Yes | Yes |
+
+---
+
+## Choosing an SDK
+
+### Use JavaScript/TypeScript if:
+- Building Node.js backend services
+- Creating serverless functions (Lambda, Vercel)
+- Working with modern JavaScript frameworks
+- Need TypeScript type safety
+
+### Use Python if:
+- Building ML/AI pipelines
+- Working with data science tools
+- Using frameworks like FastAPI, Django, Flask
+- Integrating with Jupyter notebooks
+
+---
+
+## Common Patterns
+
+Both SDKs follow similar patterns:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```javascript
+    import Raily from '@raily/sdk';
+
+    const raily = new Raily({
+      apiKey: process.env.RAILY_API_KEY
+    });
+
+    // Create content
+    const content = await raily.content.create({
+      externalId: "article-123",
+      title: "My Article",
+      type: "article",
+      source: "https://example.com/article"
+    });
+
+    // Check access
+    const access = await raily.access.check({
+      contentId: content.id,
+      requesterId: "my_app",
+      context: { purpose: "rag" }
+    });
+
+    // Get analytics
+    const usage = await raily.analytics.usage({
+      period: "30d"
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from raily import Raily
+    import os
+
+    raily = Raily(api_key=os.environ["RAILY_API_KEY"])
+
+    # Create content
+    content = raily.content.create(
+        external_id="article-123",
+        title="My Article",
+        type="article",
+        source="https://example.com/article"
+    )
+
+    # Check access
+    access = raily.access.check(
+        content_id=content.id,
+        requester_id="my_app",
+        context={"purpose": "rag"}
+    )
+
+    # Get analytics
+    usage = raily.analytics.usage(period="30d")
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Error Handling
+
+Both SDKs provide typed exceptions:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```javascript
+    import Raily, { RailyError, NotFoundError, RateLimitError } from '@raily/sdk';
+
+    try {
+      const content = await raily.content.get('invalid_id');
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        console.log('Content not found');
+      } else if (error instanceof RateLimitError) {
+        console.log(`Rate limited. Retry after ${error.retryAfter}s`);
+      } else if (error instanceof RailyError) {
+        console.log(`API error: ${error.message}`);
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from raily import Raily
+    from raily.exceptions import NotFoundError, RateLimitError, RailyError
+
+    try:
+        content = raily.content.get("invalid_id")
+    except NotFoundError:
+        print("Content not found")
+    except RateLimitError as e:
+        print(f"Rate limited. Retry after {e.retry_after}s")
+    except RailyError as e:
+        print(f"API error: {e.message}")
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Environment Configuration
+
+Both SDKs support multiple configuration methods:
+
+### Environment Variables
+
+```bash
+# Set in your environment
+export RAILY_API_KEY=raily_sk_xxxxx
+export RAILY_BASE_URL=https://api.raily.ai  # Optional
+```
+
+### Direct Configuration
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```javascript
+    const raily = new Raily({
+      apiKey: 'raily_sk_xxxxx',
+      baseUrl: 'https://api.raily.ai',  // Optional
+      timeout: 30000,  // 30 seconds
+      retries: 3
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    raily = Raily(
+        api_key="raily_sk_xxxxx",
+        base_url="https://api.raily.ai",  # Optional
+        timeout=30.0,  # 30 seconds
+        max_retries=3
+    )
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="JavaScript SDK" icon="js" href="/sdks/javascript">
+    Full JavaScript documentation
+  </Card>
+  <Card title="Python SDK" icon="python" href="/sdks/python">
+    Full Python documentation
+  </Card>
+</CardGroup>

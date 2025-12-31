@@ -1,0 +1,402 @@
+---
+title: "JavaScript SDK"
+description: "Official Raily SDK for JavaScript and TypeScript"
+---
+
+## Installation
+
+<CodeGroup>
+
+```bash npm
+npm install @raily/sdk
+```
+
+```bash yarn
+yarn add @raily/sdk
+```
+
+```bash pnpm
+pnpm add @raily/sdk
+```
+
+</CodeGroup>
+
+## Quick Start
+
+```javascript
+import Raily from '@raily/sdk';
+
+const raily = new Raily({
+  apiKey: process.env.RAILY_API_KEY
+});
+
+// Create content
+const content = await raily.content.create({
+  externalId: "article-123",
+  title: "My Article",
+  type: "article",
+  source: "https://example.com/article"
+});
+
+console.log(`Created: ${content.id}`);
+```
+
+---
+
+## Configuration
+
+```javascript
+const raily = new Raily({
+  // Required
+  apiKey: process.env.RAILY_API_KEY,
+
+  // Optional
+  baseUrl: 'https://api.raily.ai',
+  timeout: 30000,  // 30 seconds
+  retries: 3,
+  retryDelay: 1000,  // Initial retry delay in ms
+});
+```
+
+### Environment Variables
+
+The SDK automatically reads from environment variables:
+
+```bash
+RAILY_API_KEY=raily_sk_xxxxx
+RAILY_BASE_URL=https://api.raily.ai  # Optional
+```
+
+---
+
+## Content API
+
+### Create Content
+
+```javascript
+const content = await raily.content.create({
+  externalId: "article-123",
+  title: "Introduction to AI",
+  type: "article",
+  source: "https://example.com/articles/ai",
+  policyId: "pol_premium",
+  metadata: {
+    author: "Jane Smith",
+    category: "Technology"
+  },
+  tags: ["ai", "technology"]
+});
+```
+
+### List Content
+
+```javascript
+const content = await raily.content.list({
+  limit: 20,
+  type: "article"
+});
+
+content.data.forEach(item => {
+  console.log(`${item.title} (${item.id})`);
+});
+
+// Pagination
+if (content.hasMore) {
+  const nextPage = await raily.content.list({
+    cursor: content.nextCursor
+  });
+}
+```
+
+### Get Content
+
+```javascript
+const content = await raily.content.get('cnt_abc123', {
+  expand: ['policy']
+});
+
+console.log(content.title);
+console.log(content.policy.name);
+```
+
+### Update Content
+
+```javascript
+const updated = await raily.content.update('cnt_abc123', {
+  title: "Updated Title",
+  metadata: { featured: true }
+});
+```
+
+### Upsert Content
+
+```javascript
+// Creates if doesn't exist, updates if it does
+const content = await raily.content.upsert({
+  externalId: "article-123",
+  title: "My Article",
+  type: "article",
+  source: "https://example.com/article"
+});
+```
+
+### Delete Content
+
+```javascript
+await raily.content.delete('cnt_abc123');
+```
+
+### Bulk Operations
+
+```javascript
+// Bulk create
+const result = await raily.content.bulkCreate({
+  items: [
+    { externalId: "a1", title: "Article 1", type: "article", source: "..." },
+    { externalId: "a2", title: "Article 2", type: "article", source: "..." }
+  ],
+  options: { skipDuplicates: true }
+});
+
+console.log(`Created: ${result.created}, Skipped: ${result.skipped}`);
+```
+
+---
+
+## Policies API
+
+### Create Policy
+
+```javascript
+const policy = await raily.policies.create({
+  name: "Premium Access",
+  rules: [
+    {
+      action: "allow",
+      priority: 1,
+      conditions: { hasValidLicense: true },
+      permissions: ["full_access"]
+    },
+    {
+      action: "deny",
+      priority: 99,
+      conditions: { default: true }
+    }
+  ]
+});
+```
+
+### List Policies
+
+```javascript
+const policies = await raily.policies.list();
+```
+
+### Update Policy
+
+```javascript
+const updated = await raily.policies.update('pol_abc123', {
+  rules: [/* new rules */]
+});
+```
+
+### Test Policy
+
+```javascript
+const result = await raily.policies.test({
+  policyId: 'pol_abc123',
+  request: {
+    requesterId: "test_partner",
+    licenseType: "enterprise"
+  }
+});
+
+console.log(`Would be: ${result.allowed ? 'ALLOWED' : 'DENIED'}`);
+```
+
+---
+
+## Access API
+
+### Check Access
+
+```javascript
+const access = await raily.access.check({
+  contentId: 'cnt_abc123',
+  requesterId: 'my_app',
+  context: {
+    purpose: 'rag',
+    model: 'gpt-4'
+  }
+});
+
+if (access.allowed) {
+  console.log(`Access granted!`);
+  console.log(`Permissions: ${access.permissions.join(', ')}`);
+  console.log(`Content URL: ${access.contentUrl}`);
+  console.log(`Expires: ${access.expiresAt}`);
+
+  // Fetch content
+  const response = await fetch(access.contentUrl, {
+    headers: { Authorization: `Bearer ${access.token}` }
+  });
+  const content = await response.text();
+} else {
+  console.log(`Access denied: ${access.reason}`);
+}
+```
+
+---
+
+## Analytics API
+
+### Usage Analytics
+
+```javascript
+const usage = await raily.analytics.usage({
+  period: '30d',
+  groupBy: 'day',
+  contentId: 'cnt_abc123'  // Optional filter
+});
+
+console.log(`Total requests: ${usage.summary.totalRequests}`);
+console.log(`Allowed: ${usage.summary.allowed}`);
+console.log(`Denied: ${usage.summary.denied}`);
+```
+
+### Revenue Analytics
+
+```javascript
+const revenue = await raily.analytics.revenue({
+  period: '30d',
+  currency: 'USD'
+});
+
+console.log(`Total revenue: $${revenue.summary.total}`);
+```
+
+---
+
+## Webhooks API
+
+### Create Webhook
+
+```javascript
+const webhook = await raily.webhooks.create({
+  url: 'https://api.example.com/webhooks/raily',
+  events: ['access.granted', 'access.denied']
+});
+
+console.log(`Webhook secret: ${webhook.secret}`);
+```
+
+### Verify Webhook
+
+```javascript
+import { verifyWebhook } from '@raily/sdk';
+
+app.post('/webhooks/raily', express.raw({ type: 'application/json' }), (req, res) => {
+  try {
+    const event = verifyWebhook(
+      req.body,
+      req.headers['x-raily-signature'],
+      req.headers['x-raily-timestamp'],
+      process.env.RAILY_WEBHOOK_SECRET
+    );
+
+    // Handle event
+    switch (event.type) {
+      case 'access.granted':
+        handleAccessGranted(event.data);
+        break;
+    }
+
+    res.status(200).send('OK');
+  } catch (error) {
+    res.status(401).send('Invalid signature');
+  }
+});
+```
+
+---
+
+## Error Handling
+
+```javascript
+import Raily, {
+  RailyError,
+  AuthenticationError,
+  NotFoundError,
+  RateLimitError,
+  ValidationError
+} from '@raily/sdk';
+
+try {
+  const content = await raily.content.get('invalid');
+} catch (error) {
+  if (error instanceof NotFoundError) {
+    console.log('Content not found');
+  } else if (error instanceof RateLimitError) {
+    console.log(`Rate limited. Retry after ${error.retryAfter}s`);
+    // SDK automatically retries, but you can handle manually
+  } else if (error instanceof ValidationError) {
+    console.log(`Validation error: ${error.message}`);
+    console.log(`Field: ${error.param}`);
+  } else if (error instanceof AuthenticationError) {
+    console.log('Invalid API key');
+  } else if (error instanceof RailyError) {
+    console.log(`API error: ${error.code} - ${error.message}`);
+  }
+}
+```
+
+---
+
+## TypeScript Support
+
+The SDK includes full TypeScript definitions:
+
+```typescript
+import Raily, {
+  Content,
+  Policy,
+  AccessCheckResponse,
+  UsageAnalytics
+} from '@raily/sdk';
+
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY! });
+
+// Full type safety
+const content: Content = await raily.content.create({
+  externalId: "article-123",
+  title: "My Article",
+  type: "article",
+  source: "https://example.com"
+});
+
+// Typed responses
+const access: AccessCheckResponse = await raily.access.check({
+  contentId: content.id,
+  requesterId: "my_app",
+  context: { purpose: "rag" }
+});
+
+if (access.allowed) {
+  // TypeScript knows these properties exist
+  console.log(access.permissions);
+  console.log(access.contentUrl);
+}
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Python SDK" icon="python" href="/sdks/python">
+    Python SDK documentation
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Complete API documentation
+  </Card>
+</CardGroup>

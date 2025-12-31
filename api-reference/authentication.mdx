@@ -1,0 +1,321 @@
+---
+title: "Authentication"
+description: "Secure your API requests with API keys"
+---
+
+## Overview
+
+The Raily API uses API keys to authenticate requests. All API requests must include a valid API key in the `Authorization` header.
+
+## API Key Types
+
+Raily provides two types of API keys:
+
+| Type | Prefix | Permissions | Use Case |
+|------|--------|-------------|----------|
+| **Secret Key** | `raily_sk_` | Full access | Server-side applications |
+| **Public Key** | `raily_pk_` | Read-only | Client-side applications |
+
+<Warning>
+  **Never expose your secret key** in client-side code, public repositories, or browser requests. Use public keys for client-side operations.
+</Warning>
+
+---
+
+## Using API Keys
+
+Include your API key in the `Authorization` header with the `Bearer` prefix:
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.raily.ai/v1/content \
+  -H "Authorization: Bearer raily_sk_xxxxxxxxxxxxx"
+```
+
+```javascript JavaScript
+const raily = new Raily({
+  apiKey: process.env.RAILY_SECRET_KEY
+});
+```
+
+```python Python
+raily = Raily(api_key=os.environ["RAILY_SECRET_KEY"])
+```
+
+</CodeGroup>
+
+---
+
+## Managing API Keys
+
+### Create a Key
+
+<CodeGroup>
+
+```javascript JavaScript
+const key = await raily.apiKeys.create({
+  name: "Production Server",
+  type: "secret",
+  permissions: ["content:write", "policies:write", "analytics:read"]
+});
+
+console.log(`Key created: ${key.key}`);
+// Note: The full key is only shown once at creation
+```
+
+```bash cURL
+curl -X POST https://api.raily.ai/v1/api-keys \
+  -H "Authorization: Bearer raily_sk_xxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production Server",
+    "type": "secret",
+    "permissions": ["content:write", "policies:write", "analytics:read"]
+  }'
+```
+
+</CodeGroup>
+
+### List Keys
+
+```javascript
+const keys = await raily.apiKeys.list();
+
+keys.data.forEach(key => {
+  console.log(`${key.name}: ${key.prefix}... (${key.type})`);
+  console.log(`  Created: ${key.createdAt}`);
+  console.log(`  Last used: ${key.lastUsedAt}`);
+});
+```
+
+### Revoke a Key
+
+```javascript
+await raily.apiKeys.revoke('key_abc123');
+```
+
+### Rotate a Key
+
+```javascript
+// Create new key, then revoke old one
+const newKey = await raily.apiKeys.create({
+  name: "Production Server (Rotated)",
+  type: "secret",
+  permissions: ["content:write", "policies:write"]
+});
+
+// Update your application with the new key
+// Then revoke the old one
+await raily.apiKeys.revoke('key_old123');
+```
+
+---
+
+## Permissions
+
+Control what each API key can do:
+
+| Permission | Description |
+|------------|-------------|
+| `content:read` | Read content |
+| `content:write` | Create, update, delete content |
+| `policies:read` | Read policies |
+| `policies:write` | Create, update, delete policies |
+| `access:check` | Check access permissions |
+| `analytics:read` | Read analytics data |
+| `webhooks:manage` | Manage webhooks |
+| `api_keys:manage` | Manage API keys |
+
+### Permission Examples
+
+```javascript
+// Read-only analytics key
+const analyticsKey = await raily.apiKeys.create({
+  name: "Analytics Dashboard",
+  type: "secret",
+  permissions: ["analytics:read"]
+});
+
+// Content management key
+const cmsKey = await raily.apiKeys.create({
+  name: "CMS Integration",
+  type: "secret",
+  permissions: ["content:read", "content:write"]
+});
+
+// Full access key
+const adminKey = await raily.apiKeys.create({
+  name: "Admin",
+  type: "secret",
+  permissions: ["*"]  // All permissions
+});
+```
+
+---
+
+## IP Allowlisting
+
+Restrict API key usage to specific IP addresses:
+
+```javascript
+const key = await raily.apiKeys.create({
+  name: "Production Server",
+  type: "secret",
+  permissions: ["*"],
+  allowedIps: [
+    "192.168.1.100",
+    "10.0.0.0/24"  // CIDR notation supported
+  ]
+});
+```
+
+---
+
+## Key Expiration
+
+Set automatic expiration for temporary access:
+
+```javascript
+const temporaryKey = await raily.apiKeys.create({
+  name: "Contractor Access",
+  type: "secret",
+  permissions: ["content:read"],
+  expiresAt: "2024-03-01T00:00:00Z"
+});
+```
+
+---
+
+## Environment-Specific Keys
+
+Best practice: Use different keys for each environment:
+
+```javascript
+// .env.development
+RAILY_API_KEY=raily_sk_dev_xxxxx
+
+// .env.staging
+RAILY_API_KEY=raily_sk_staging_xxxxx
+
+// .env.production
+RAILY_API_KEY=raily_sk_prod_xxxxx
+```
+
+---
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Environment Variables" icon="key">
+    Never hardcode API keys. Use environment variables or secrets managers.
+  </Card>
+  <Card title="Rotate Regularly" icon="rotate">
+    Rotate keys periodically and immediately if compromised.
+  </Card>
+  <Card title="Least Privilege" icon="shield">
+    Give each key only the permissions it needs.
+  </Card>
+  <Card title="Monitor Usage" icon="chart-line">
+    Review key usage in the dashboard to detect anomalies.
+  </Card>
+</CardGroup>
+
+### Example: Using AWS Secrets Manager
+
+```javascript
+import { SecretsManager } from '@aws-sdk/client-secrets-manager';
+
+const secretsManager = new SecretsManager({ region: 'us-east-1' });
+
+async function getRailyClient() {
+  const secret = await secretsManager.getSecretValue({
+    SecretId: 'raily/api-key'
+  });
+
+  return new Raily({
+    apiKey: JSON.parse(secret.SecretString).apiKey
+  });
+}
+```
+
+### Example: Using HashiCorp Vault
+
+```javascript
+import vault from 'node-vault';
+
+const client = vault({ endpoint: 'https://vault.example.com' });
+
+async function getRailyClient() {
+  const { data } = await client.read('secret/data/raily');
+
+  return new Raily({
+    apiKey: data.data.apiKey
+  });
+}
+```
+
+---
+
+## Error Responses
+
+### Invalid API Key
+
+```json
+{
+  "error": {
+    "code": "invalid_api_key",
+    "message": "The API key provided is invalid or has been revoked",
+    "type": "authentication_error"
+  }
+}
+```
+
+### Missing API Key
+
+```json
+{
+  "error": {
+    "code": "missing_api_key",
+    "message": "No API key provided. Include your key in the Authorization header.",
+    "type": "authentication_error"
+  }
+}
+```
+
+### Insufficient Permissions
+
+```json
+{
+  "error": {
+    "code": "insufficient_permissions",
+    "message": "This API key does not have permission to access this resource",
+    "type": "authorization_error"
+  }
+}
+```
+
+### IP Not Allowed
+
+```json
+{
+  "error": {
+    "code": "ip_not_allowed",
+    "message": "Request from IP 203.0.113.50 is not allowed for this API key",
+    "type": "authorization_error"
+  }
+}
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Content API" icon="file" href="/api-reference/content/list">
+    Start managing content
+  </Card>
+  <Card title="SDKs" icon="code" href="/sdks/overview">
+    Use our official SDKs
+  </Card>
+</CardGroup>

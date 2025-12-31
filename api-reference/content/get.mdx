@@ -1,0 +1,160 @@
+---
+title: "Get Content"
+api: "GET /v1/content/{id}"
+description: "Retrieve a single content item by ID"
+---
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The content ID (e.g., `cnt_abc123`) or external ID
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="expand" type="string">
+  Expand related objects: `policy`
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  Unique identifier
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  Always `content`
+</ResponseField>
+
+<ResponseField name="externalId" type="string">
+  Your external identifier
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Content title
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Content type: `article`, `report`, `image`, `dataset`, `video`
+</ResponseField>
+
+<ResponseField name="source" type="string">
+  Source URL
+</ResponseField>
+
+<ResponseField name="policyId" type="string">
+  Applied policy ID
+</ResponseField>
+
+<ResponseField name="policy" type="object">
+  Expanded policy object (if requested)
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  Custom metadata key-value pairs
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Content status: `active`, `archived`
+</ResponseField>
+
+<ResponseField name="stats" type="object">
+  Access statistics
+  <Expandable>
+    <ResponseField name="totalRequests" type="integer">
+      Total access requests
+    </ResponseField>
+    <ResponseField name="allowedRequests" type="integer">
+      Requests that were allowed
+    </ResponseField>
+    <ResponseField name="deniedRequests" type="integer">
+      Requests that were denied
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="created" type="string">
+  ISO 8601 creation timestamp
+</ResponseField>
+
+<ResponseField name="updated" type="string">
+  ISO 8601 last update timestamp
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl https://api.raily.ai/v1/content/cnt_abc123xyz?expand=policy \
+  -H "Authorization: Bearer raily_sk_xxxxx"
+```
+
+```javascript JavaScript
+const content = await raily.content.get('cnt_abc123xyz', {
+  expand: ['policy']
+});
+
+console.log(content.title);
+console.log(`Policy: ${content.policy.name}`);
+```
+
+```python Python
+content = raily.content.get(
+    "cnt_abc123xyz",
+    expand=["policy"]
+)
+
+print(content.title)
+print(f"Policy: {content.policy.name}")
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+  "id": "cnt_abc123xyz",
+  "object": "content",
+  "externalId": "article-123",
+  "title": "Introduction to AI",
+  "type": "article",
+  "source": "https://example.com/articles/ai-intro",
+  "policyId": "pol_premium",
+  "policy": {
+    "id": "pol_premium",
+    "name": "Premium Content Policy",
+    "rules": [
+      {
+        "action": "allow",
+        "conditions": { "hasValidLicense": true }
+      }
+    ]
+  },
+  "metadata": {
+    "author": "Jane Smith",
+    "category": "Technology",
+    "publishedAt": "2024-01-15",
+    "wordCount": 2500
+  },
+  "status": "active",
+  "stats": {
+    "totalRequests": 1247,
+    "allowedRequests": 1102,
+    "deniedRequests": 145
+  },
+  "created": "2024-01-15T10:30:00Z",
+  "updated": "2024-01-16T14:22:00Z"
+}
+```
+
+```json Not Found
+{
+  "error": {
+    "code": "content_not_found",
+    "message": "Content with ID 'cnt_invalid' not found",
+    "type": "not_found_error"
+  }
+}
+```
+
+</ResponseExample>

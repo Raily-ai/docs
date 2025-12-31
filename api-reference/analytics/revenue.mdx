@@ -1,0 +1,102 @@
+---
+title: "Revenue Analytics"
+api: "GET /v1/analytics/revenue"
+description: "Retrieve revenue and billing analytics"
+---
+
+## Query Parameters
+
+<ParamField query="period" type="string" default="30d">
+  Time period: `7d`, `30d`, `90d`, `year`
+</ParamField>
+
+<ParamField query="startDate" type="string">
+  Custom start date (ISO 8601)
+</ParamField>
+
+<ParamField query="endDate" type="string">
+  Custom end date (ISO 8601)
+</ParamField>
+
+<ParamField query="groupBy" type="string" default="day">
+  Grouping: `day`, `week`, `month`
+</ParamField>
+
+<ParamField query="currency" type="string" default="USD">
+  Currency for amounts
+</ParamField>
+
+## Response
+
+<ResponseField name="summary" type="object">
+  Revenue summary
+  <Expandable>
+    <ResponseField name="total" type="number">Total revenue</ResponseField>
+    <ResponseField name="currency" type="string">Currency code</ResponseField>
+    <ResponseField name="changePercent" type="number">Change vs previous period</ResponseField>
+    <ResponseField name="projectedMonthly" type="number">Projected monthly revenue</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="timeSeries" type="array">
+  Revenue by time period
+</ResponseField>
+
+<ResponseField name="byLicenseType" type="object">
+  Revenue breakdown by license tier
+</ResponseField>
+
+<ResponseField name="byContent" type="array">
+  Top revenue-generating content
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl "https://api.raily.ai/v1/analytics/revenue?period=30d&currency=USD" \
+  -H "Authorization: Bearer raily_sk_xxxxx"
+```
+
+```javascript JavaScript
+const revenue = await raily.analytics.revenue({
+  period: '30d',
+  currency: 'USD'
+});
+
+console.log(`Total Revenue: $${revenue.summary.total}`);
+console.log(`Growth: ${revenue.summary.changePercent}%`);
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+  "summary": {
+    "total": 45230.00,
+    "currency": "USD",
+    "changePercent": 12.5,
+    "projectedMonthly": 52000.00
+  },
+  "timeSeries": [
+    { "date": "2024-01-01", "revenue": 1520.00 },
+    { "date": "2024-01-02", "revenue": 1610.00 }
+  ],
+  "byLicenseType": {
+    "enterprise": 35000.00,
+    "professional": 8500.00,
+    "basic": 1730.00
+  },
+  "byRequester": [
+    { "id": "partner_openai", "name": "OpenAI", "revenue": 18500.00 },
+    { "id": "partner_anthropic", "name": "Anthropic", "revenue": 12200.00 }
+  ],
+  "byContent": [
+    { "id": "cnt_abc", "title": "AI Report 2024", "revenue": 8500.00 },
+    { "id": "cnt_def", "title": "Premium Dataset", "revenue": 6200.00 }
+  ]
+}
+```
+
+</ResponseExample>

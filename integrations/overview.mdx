@@ -1,0 +1,290 @@
+---
+title: "Integrations Overview"
+sidebarTitle: "Overview"
+description: "Connect Raily with your existing tools and platforms"
+---
+
+## Overview
+
+Raily integrates seamlessly with your existing infrastructure. Whether you're connecting to AI providers, syncing with your CMS, or building custom integrations, we've got you covered.
+
+<CardGroup cols={2}>
+  <Card title="LLM Providers" icon="robot" href="/integrations/llm-providers">
+    Connect with OpenAI, Anthropic, Google, and more
+  </Card>
+  <Card title="CMS Platforms" icon="newspaper" href="/integrations/cms-platforms">
+    Sync content from WordPress, Contentful, Strapi
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
+    Real-time event notifications
+  </Card>
+  <Card title="Analytics" icon="chart-line" href="/guides/analytics">
+    Export data to your analytics stack
+  </Card>
+</CardGroup>
+
+---
+
+## Integration Methods
+
+Raily supports multiple integration patterns:
+
+### Direct API Integration
+
+The most flexible approach. Use our REST API directly in your application.
+
+```javascript
+import Raily from '@raily/sdk';
+
+const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+// Register content
+await raily.content.create({ ... });
+
+// Check access
+const access = await raily.access.check({ ... });
+```
+
+### SDK Libraries
+
+Native libraries for popular languages:
+
+| Language | Package | Installation |
+|----------|---------|--------------|
+| JavaScript/TypeScript | `@raily/sdk` | `npm install @raily/sdk` |
+| Python | `raily` | `pip install raily` |
+
+### Webhooks
+
+Receive real-time notifications when events occur:
+
+```javascript
+// Your webhook endpoint receives events like:
+{
+  type: "access.granted",
+  timestamp: "2024-01-15T10:30:00Z",
+  data: {
+    contentId: "cnt_abc123",
+    requesterId: "partner_openai",
+    permissions: ["full_access"]
+  }
+}
+```
+
+### CMS Plugins
+
+Pre-built plugins for popular content management systems:
+
+- **WordPress**: One-click plugin from the WordPress directory
+- **Contentful**: Native app from the Contentful marketplace
+- **Strapi**: Community plugin with lifecycle hooks
+
+---
+
+## Quick Start Examples
+
+<Tabs>
+  <Tab title="OpenAI">
+    Protect your content when used with OpenAI's API:
+
+    ```javascript
+    import OpenAI from 'openai';
+    import Raily from '@raily/sdk';
+
+    const openai = new OpenAI();
+    const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+    async function queryWithProtectedContent(userQuery, contentId) {
+      // Check access first
+      const access = await raily.access.check({
+        contentId,
+        requesterId: "my_app",
+        context: { purpose: "rag" }
+      });
+
+      if (!access.allowed) {
+        throw new Error(`Access denied: ${access.reason}`);
+      }
+
+      // Fetch protected content
+      const contentResponse = await fetch(access.contentUrl, {
+        headers: { Authorization: `Bearer ${access.token}` }
+      });
+      const content = await contentResponse.text();
+
+      // Use with OpenAI
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: `Context: ${content}` },
+          { role: "user", content: userQuery }
+        ]
+      });
+
+      return response.choices[0].message.content;
+    }
+    ```
+  </Tab>
+
+  <Tab title="Anthropic">
+    Use protected content with Claude:
+
+    ```javascript
+    import Anthropic from '@anthropic-ai/sdk';
+    import Raily from '@raily/sdk';
+
+    const anthropic = new Anthropic();
+    const raily = new Raily({ apiKey: process.env.RAILY_API_KEY });
+
+    async function askClaudeWithContent(question, contentId) {
+      const access = await raily.access.check({
+        contentId,
+        requesterId: "my_claude_app",
+        context: { purpose: "inference" }
+      });
+
+      if (!access.allowed) {
+        return `Unable to access content: ${access.reason}`;
+      }
+
+      const contentResponse = await fetch(access.contentUrl);
+      const content = await contentResponse.text();
+
+      const message = await anthropic.messages.create({
+        model: "claude-3-opus-20240229",
+        max_tokens: 1024,
+        messages: [
+          {
+            role: "user",
+            content: `Based on this content:\n\n${content}\n\nAnswer: ${question}`
+          }
+        ]
+      });
+
+      return message.content[0].text;
+    }
+    ```
+  </Tab>
+
+  <Tab title="LangChain">
+    Integrate with LangChain for RAG applications:
+
+    ```python
+    from langchain.llms import OpenAI
+    from langchain.chains import RetrievalQA
+    from raily import Raily
+
+    raily = Raily(api_key=os.environ["RAILY_API_KEY"])
+
+    class RailyRetriever:
+        def __init__(self, content_ids):
+            self.content_ids = content_ids
+
+        def get_relevant_documents(self, query):
+            documents = []
+            for content_id in self.content_ids:
+                access = raily.access.check(
+                    content_id=content_id,
+                    requester_id="langchain_app",
+                    context={"purpose": "rag"}
+                )
+                if access.allowed:
+                    content = requests.get(access.content_url).text
+                    documents.append(Document(page_content=content))
+            return documents
+
+    # Use in a chain
+    retriever = RailyRetriever(["cnt_abc", "cnt_def"])
+    qa = RetrievalQA.from_chain_type(
+        llm=OpenAI(),
+        retriever=retriever
+    )
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Authentication
+
+All integrations use API key authentication:
+
+```bash
+# Header-based authentication
+Authorization: Bearer raily_sk_xxxxxxxxxxxx
+```
+
+Generate API keys from your [dashboard](https://dashboard.raily.ai/api-keys).
+
+<Warning>
+  **Security Best Practices**
+  - Use environment variables for API keys
+  - Never commit keys to version control
+  - Use different keys for development and production
+  - Rotate keys periodically
+</Warning>
+
+---
+
+## Rate Limits
+
+Integration rate limits by plan:
+
+| Plan | Requests/minute | Requests/day |
+|------|-----------------|--------------|
+| Starter | 60 | 10,000 |
+| Professional | 300 | 100,000 |
+| Enterprise | Custom | Custom |
+
+Rate limit headers are included in every response:
+
+```
+X-RateLimit-Limit: 300
+X-RateLimit-Remaining: 295
+X-RateLimit-Reset: 1705320000
+```
+
+---
+
+## Error Handling
+
+All integrations return consistent error responses:
+
+```json
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit exceeded. Please retry after 60 seconds.",
+    "retryAfter": 60
+  }
+}
+```
+
+Common error codes:
+
+| Code | Description |
+|------|-------------|
+| `invalid_api_key` | API key is missing or invalid |
+| `rate_limit_exceeded` | Too many requests |
+| `content_not_found` | Content ID doesn't exist |
+| `access_denied` | Policy blocked the request |
+| `server_error` | Internal server error |
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="LLM Providers" icon="robot" href="/integrations/llm-providers">
+    Detailed integration guides for AI providers
+  </Card>
+  <Card title="CMS Platforms" icon="newspaper" href="/integrations/cms-platforms">
+    Sync your existing content
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
+    Set up real-time notifications
+  </Card>
+  <Card title="SDKs" icon="code" href="/sdks/overview">
+    Native library documentation
+  </Card>
+</CardGroup>

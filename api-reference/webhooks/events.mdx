@@ -1,0 +1,195 @@
+---
+title: "Webhook Events"
+description: "Complete reference for webhook event payloads"
+---
+
+## Event Structure
+
+All webhook events follow this structure:
+
+```json
+{
+  "id": "evt_abc123xyz",
+  "type": "event.type",
+  "created": "2024-01-15T10:30:00Z",
+  "data": {
+    // Event-specific data
+  }
+}
+```
+
+## Access Events
+
+### access.granted
+
+Sent when content access is approved.
+
+```json
+{
+  "id": "evt_abc123",
+  "type": "access.granted",
+  "created": "2024-01-15T10:30:00Z",
+  "data": {
+    "contentId": "cnt_xyz789",
+    "contentTitle": "AI Report 2024",
+    "requesterId": "partner_openai",
+    "requesterName": "OpenAI",
+    "permissions": ["full_access", "inference"],
+    "policyId": "pol_enterprise",
+    "context": {
+      "purpose": "rag",
+      "model": "gpt-4"
+    },
+    "rateLimit": {
+      "remaining": 999,
+      "limit": 1000,
+      "resetAt": "2024-01-15T11:00:00Z"
+    }
+  }
+}
+```
+
+### access.denied
+
+Sent when content access is blocked.
+
+```json
+{
+  "id": "evt_def456",
+  "type": "access.denied",
+  "created": "2024-01-15T10:31:00Z",
+  "data": {
+    "contentId": "cnt_xyz789",
+    "contentTitle": "AI Report 2024",
+    "requesterId": "unknown_requester",
+    "reason": "no_valid_license",
+    "message": "A valid license is required",
+    "policyId": "pol_enterprise"
+  }
+}
+```
+
+### access.rate_limited
+
+Sent when a request exceeds rate limits.
+
+```json
+{
+  "id": "evt_ghi789",
+  "type": "access.rate_limited",
+  "created": "2024-01-15T10:32:00Z",
+  "data": {
+    "contentId": "cnt_xyz789",
+    "requesterId": "partner_openai",
+    "rateLimit": {
+      "limit": 1000,
+      "used": 1000,
+      "resetAt": "2024-01-15T11:00:00Z"
+    }
+  }
+}
+```
+
+---
+
+## Content Events
+
+### content.created
+
+```json
+{
+  "id": "evt_jkl012",
+  "type": "content.created",
+  "created": "2024-01-15T10:33:00Z",
+  "data": {
+    "contentId": "cnt_new123",
+    "externalId": "article-456",
+    "title": "New Research Paper",
+    "type": "report",
+    "source": "https://example.com/papers/new"
+  }
+}
+```
+
+### content.updated
+
+```json
+{
+  "id": "evt_mno345",
+  "type": "content.updated",
+  "created": "2024-01-15T10:34:00Z",
+  "data": {
+    "contentId": "cnt_abc123",
+    "changes": {
+      "title": { "from": "Old Title", "to": "New Title" },
+      "policyId": { "from": "pol_old", "to": "pol_new" }
+    }
+  }
+}
+```
+
+### content.deleted
+
+```json
+{
+  "id": "evt_pqr678",
+  "type": "content.deleted",
+  "created": "2024-01-15T10:35:00Z",
+  "data": {
+    "contentId": "cnt_deleted",
+    "externalId": "article-removed"
+  }
+}
+```
+
+---
+
+## Analytics Events
+
+### analytics.threshold
+
+```json
+{
+  "id": "evt_stu901",
+  "type": "analytics.threshold",
+  "created": "2024-01-15T10:36:00Z",
+  "data": {
+    "alertId": "alert_xyz",
+    "alertName": "High Denial Rate",
+    "metric": "denial_rate",
+    "threshold": 0.1,
+    "currentValue": 0.15,
+    "period": "1h"
+  }
+}
+```
+
+---
+
+## Verifying Webhooks
+
+Always verify webhook signatures:
+
+```javascript
+import crypto from 'crypto';
+
+function verifyWebhook(payload, signature, timestamp, secret) {
+  const data = `${timestamp}.${payload}`;
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(data)
+    .digest('hex');
+
+  if (signature !== `sha256=${expected}`) {
+    throw new Error('Invalid signature');
+  }
+
+  // Check timestamp (5 minute tolerance)
+  const eventTime = parseInt(timestamp) * 1000;
+  if (Math.abs(Date.now() - eventTime) > 300000) {
+    throw new Error('Timestamp too old');
+  }
+
+  return JSON.parse(payload);
+}
+```

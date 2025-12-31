@@ -1,0 +1,91 @@
+---
+title: "Update Policy"
+api: "PATCH /v1/policies/{id}"
+description: "Update an existing access policy"
+---
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The policy ID (e.g., `pol_abc123`)
+</ParamField>
+
+## Request Body
+
+<ParamField body="name" type="string">
+  Updated policy name
+</ParamField>
+
+<ParamField body="description" type="string">
+  Updated description
+</ParamField>
+
+<ParamField body="rules" type="array">
+  Updated rules array (replaces existing rules)
+</ParamField>
+
+<ParamField body="defaultAction" type="string">
+  Default action: `allow` or `deny`
+</ParamField>
+
+<Note>
+  Policy updates create a new version. Previous versions are retained for rollback.
+</Note>
+
+<RequestExample>
+
+```bash cURL
+curl -X PATCH https://api.raily.ai/v1/policies/pol_xyz789 \
+  -H "Authorization: Bearer raily_sk_xxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rules": [
+      {
+        "action": "allow",
+        "priority": 1,
+        "conditions": { "licenseType": ["enterprise", "professional"] },
+        "permissions": ["full_access"]
+      }
+    ]
+  }'
+```
+
+```javascript JavaScript
+const policy = await raily.policies.update('pol_xyz789', {
+  rules: [
+    {
+      action: 'allow',
+      priority: 1,
+      conditions: { licenseType: ['enterprise', 'professional'] },
+      permissions: ['full_access']
+    }
+  ]
+});
+
+console.log(`Updated to version: ${policy.version}`);
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success (200)
+{
+  "id": "pol_xyz789",
+  "object": "policy",
+  "name": "Enterprise Access",
+  "rules": [
+    {
+      "action": "allow",
+      "priority": 1,
+      "conditions": { "licenseType": ["enterprise", "professional"] },
+      "permissions": ["full_access"]
+    }
+  ],
+  "version": 2,
+  "created": "2024-01-15T10:30:00Z",
+  "updated": "2024-01-16T14:00:00Z"
+}
+```
+
+</ResponseExample>

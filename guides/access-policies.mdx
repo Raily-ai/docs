@@ -1,0 +1,564 @@
+---
+title: "Access Policies"
+description: "Control who can access your content with powerful, flexible policies"
+---
+
+## Overview
+
+Access policies are the heart of Raily's content protection. They define who can access your content, under what conditions, and with what limitations. This guide covers everything from simple allow/deny rules to complex conditional policies.
+
+## Policy Basics
+
+Every policy consists of:
+
+1. **Rules**: Conditions and actions that determine access
+2. **Priority**: Order in which rules are evaluated
+3. **Default Action**: What happens when no rules match
+
+```javascript
+const policy = await raily.policies.create({
+  name: "My First Policy",
+  description: "Basic access control",
+  rules: [
+    {
+      action: "allow",
+      priority: 1,
+      conditions: { /* when to apply */ },
+      permissions: [ /* what's allowed */ ],
+      rateLimit: { /* usage limits */ }
+    }
+  ],
+  defaultAction: "deny"
+});
+```
+
+---
+
+## Rule Actions
+
+<Tabs>
+  <Tab title="Allow">
+    Grants access to the content. You can specify permissions and rate limits.
+
+    ```javascript
+    {
+      action: "allow",
+      conditions: { hasValidLicense: true },
+      permissions: ["full_access"],
+      rateLimit: { requests: 1000, period: "hour" }
+    }
+    ```
+  </Tab>
+  <Tab title="Deny">
+    Blocks access to the content. You can provide a custom message.
+
+    ```javascript
+    {
+      action: "deny",
+      conditions: { requesterId: "blocked_partner" },
+      message: "Access has been revoked for this requester"
+    }
+    ```
+  </Tab>
+  <Tab title="Review">
+    Flags the request for manual review (available on Enterprise plans).
+
+    ```javascript
+    {
+      action: "review",
+      conditions: { purpose: "training" },
+      message: "Training requests require manual approval"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Conditions
+
+Conditions determine when a rule applies. Multiple conditions are combined with AND logic.
+
+### Identity Conditions
+
+Control access based on who's requesting:
+
+```javascript
+conditions: {
+  // Specific requesters
+  requesterId: ["partner_openai", "partner_anthropic"],
+
+  // Requester types
+  requesterType: "ai_provider",
+
+  // Requester tags
+  requesterTags: ["verified", "enterprise"]
+}
+```
+
+### License Conditions
+
+Control access based on licensing:
+
+```javascript
+conditions: {
+  // Must have any valid license
+  hasValidLicense: true,
+
+  // Specific license types
+  licenseType: ["enterprise", "professional"],
+
+  // License must not be expired
+  licenseExpiry: { after: "now" },
+
+  // Specific license features
+  licenseFeatures: ["api_access", "bulk_download"]
+}
+```
+
+### Usage Conditions
+
+Control based on how content will be used:
+
+```javascript
+conditions: {
+  // Purpose of access
+  purpose: ["inference", "rag"],
+
+  // Exclude certain purposes
+  purposeNot: ["training", "fine_tuning"],
+
+  // Commercial vs non-commercial
+  commercialUse: false
+}
+```
+
+### Time-Based Conditions
+
+Control when access is available:
+
+```javascript
+conditions: {
+  time: {
+    // Date range
+    after: "2024-01-01",
+    before: "2024-12-31",
+
+    // Time of day (UTC)
+    afterTime: "09:00",
+    beforeTime: "17:00",
+
+    // Days of week
+    daysOfWeek: ["monday", "tuesday", "wednesday", "thursday", "friday"]
+  }
+}
+```
+
+### Content Conditions
+
+Apply rules to specific content:
+
+```javascript
+conditions: {
+  // Content type
+  contentType: "article",
+
+  // Content tags
+  contentTags: ["premium", "exclusive"],
+
+  // Content metadata
+  "content.metadata.category": "Research"
+}
+```
+
+---
+
+## Permissions
+
+Permissions define what actions are allowed when access is granted:
+
+| Permission | Description |
+|------------|-------------|
+| `full_access` | Complete content access with no restrictions |
+| `preview_only` | Limited preview (configurable length) |
+| `metadata_only` | Access to metadata but not content body |
+| `commercial_use` | Can use in commercial applications |
+| `training` | Can use for AI model training |
+| `fine_tuning` | Can use for model fine-tuning |
+| `inference` | Can use for AI inference/RAG |
+| `redistribution` | Can redistribute to third parties |
+
+```javascript
+{
+  action: "allow",
+  conditions: { licenseType: "enterprise" },
+  permissions: [
+    "full_access",
+    "commercial_use",
+    "training",
+    "fine_tuning"
+  ]
+}
+```
+
+---
+
+## Rate Limiting
+
+Protect your content from excessive usage:
+
+```javascript
+rateLimit: {
+  // Maximum requests
+  requests: 1000,
+
+  // Time period
+  period: "hour",  // minute, hour, day, week, month
+
+  // Allow bursts
+  burst: 100,  // Extra allowance for short bursts
+
+  // Limit scope
+  scope: "requester"  // requester, global, content
+}
+```
+
+### Rate Limit Examples
+
+<AccordionGroup>
+  <Accordion title="Per-Requester Hourly Limit" icon="user">
+    Each requester gets 1000 requests per hour:
+
+    ```javascript
+    rateLimit: {
+      requests: 1000,
+      period: "hour",
+      scope: "requester"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Global Daily Cap" icon="globe">
+    Total of 10,000 requests per day across all requesters:
+
+    ```javascript
+    rateLimit: {
+      requests: 10000,
+      period: "day",
+      scope: "global"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Per-Content Monthly Limit" icon="file">
+    Each piece of content can be accessed 5,000 times per month:
+
+    ```javascript
+    rateLimit: {
+      requests: 5000,
+      period: "month",
+      scope: "content"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Policy Templates
+
+Start with these pre-built templates for common scenarios:
+
+### Open Access (Free Content)
+
+```javascript
+const openPolicy = await raily.policies.create({
+  name: "Open Access",
+  description: "Free content available to everyone",
+  rules: [
+    {
+      action: "allow",
+      priority: 1,
+      conditions: { default: true },
+      permissions: ["full_access"],
+      rateLimit: { requests: 100, period: "minute", scope: "requester" }
+    }
+  ]
+});
+```
+
+### Licensed Access Only
+
+```javascript
+const licensedPolicy = await raily.policies.create({
+  name: "Licensed Access",
+  description: "Requires valid license",
+  rules: [
+    {
+      action: "allow",
+      priority: 1,
+      conditions: {
+        hasValidLicense: true,
+        licenseExpiry: { after: "now" }
+      },
+      permissions: ["full_access"]
+    },
+    {
+      action: "deny",
+      priority: 99,
+      conditions: { default: true },
+      message: "A valid license is required. Contact sales@raily.ai"
+    }
+  ]
+});
+```
+
+### Tiered Access
+
+```javascript
+const tieredPolicy = await raily.policies.create({
+  name: "Tiered Access",
+  description: "Different access levels based on license tier",
+  rules: [
+    // Enterprise: Full access
+    {
+      action: "allow",
+      priority: 1,
+      conditions: { licenseType: "enterprise" },
+      permissions: ["full_access", "commercial_use", "training"],
+      rateLimit: { requests: 10000, period: "hour" }
+    },
+    // Professional: Full access, limited rate
+    {
+      action: "allow",
+      priority: 2,
+      conditions: { licenseType: "professional" },
+      permissions: ["full_access", "commercial_use"],
+      rateLimit: { requests: 1000, period: "hour" }
+    },
+    // Basic: Preview only
+    {
+      action: "allow",
+      priority: 3,
+      conditions: { licenseType: "basic" },
+      permissions: ["preview_only"],
+      rateLimit: { requests: 100, period: "hour" }
+    },
+    // Default: Deny
+    {
+      action: "deny",
+      priority: 99,
+      conditions: { default: true }
+    }
+  ]
+});
+```
+
+### Training Restrictions
+
+```javascript
+const noTrainingPolicy = await raily.policies.create({
+  name: "Inference Only",
+  description: "Allow inference but block training",
+  rules: [
+    // Block all training purposes
+    {
+      action: "deny",
+      priority: 1,
+      conditions: { purpose: ["training", "fine_tuning"] },
+      message: "Training use is not permitted for this content"
+    },
+    // Allow inference for licensed users
+    {
+      action: "allow",
+      priority: 2,
+      conditions: {
+        hasValidLicense: true,
+        purpose: ["inference", "rag"]
+      },
+      permissions: ["full_access", "inference"]
+    },
+    // Default deny
+    {
+      action: "deny",
+      priority: 99,
+      conditions: { default: true }
+    }
+  ]
+});
+```
+
+### Time-Limited Access
+
+```javascript
+const timeLimitedPolicy = await raily.policies.create({
+  name: "Business Hours Only",
+  description: "Content available during business hours",
+  rules: [
+    {
+      action: "allow",
+      priority: 1,
+      conditions: {
+        hasValidLicense: true,
+        time: {
+          afterTime: "09:00",
+          beforeTime: "18:00",
+          daysOfWeek: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+          timezone: "America/New_York"
+        }
+      },
+      permissions: ["full_access"]
+    },
+    {
+      action: "deny",
+      priority: 99,
+      conditions: { default: true },
+      message: "Content is only available Mon-Fri, 9AM-6PM ET"
+    }
+  ]
+});
+```
+
+---
+
+## Applying Policies
+
+### To Individual Content
+
+```javascript
+// When creating content
+const content = await raily.content.create({
+  externalId: "article-123",
+  title: "Premium Article",
+  type: "article",
+  source: "https://example.com/premium",
+  policyId: "pol_abc123"
+});
+
+// Or update existing content
+await raily.content.update("cnt_xyz789", {
+  policyId: "pol_abc123"
+});
+```
+
+### To Multiple Content Items
+
+```javascript
+// Bulk update
+await raily.content.bulkUpdate({
+  filter: {
+    type: "article",
+    "metadata.tier": "premium"
+  },
+  update: {
+    policyId: "pol_premium_policy"
+  }
+});
+```
+
+### Default Policy
+
+Set a default policy for content without explicit policy assignment:
+
+```javascript
+await raily.settings.update({
+  defaultPolicyId: "pol_default"
+});
+```
+
+---
+
+## Testing Policies
+
+Before deploying, test your policies with simulated requests:
+
+```javascript
+const testResult = await raily.policies.test({
+  policyId: "pol_abc123",
+  request: {
+    requesterId: "partner_openai",
+    licenseType: "enterprise",
+    purpose: "training",
+    time: "2024-06-15T14:30:00Z"
+  }
+});
+
+console.log(testResult);
+// {
+//   allowed: true,
+//   matchedRule: { priority: 1, action: "allow" },
+//   permissions: ["full_access", "training"],
+//   rateLimit: { remaining: 9999 }
+// }
+```
+
+### Test Multiple Scenarios
+
+```javascript
+const scenarios = [
+  { requesterId: "partner_a", licenseType: "enterprise" },
+  { requesterId: "partner_b", licenseType: "basic" },
+  { requesterId: "unknown", licenseType: null },
+];
+
+const results = await raily.policies.testBatch({
+  policyId: "pol_abc123",
+  requests: scenarios
+});
+
+results.forEach((result, i) => {
+  console.log(`Scenario ${i + 1}: ${result.allowed ? 'ALLOWED' : 'DENIED'}`);
+});
+```
+
+---
+
+## Policy Versioning
+
+Raily automatically versions your policies. You can view history and rollback if needed:
+
+```javascript
+// View policy history
+const history = await raily.policies.history("pol_abc123");
+
+// Rollback to previous version
+await raily.policies.rollback("pol_abc123", {
+  version: 3
+});
+
+// Compare versions
+const diff = await raily.policies.diff("pol_abc123", {
+  from: 2,
+  to: 4
+});
+```
+
+---
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Start Restrictive" icon="shield">
+    Begin with deny-by-default and explicitly allow access. It's easier to loosen restrictions than tighten them.
+  </Card>
+  <Card title="Test Before Deploy" icon="flask">
+    Always test policies with representative scenarios before applying to production content.
+  </Card>
+  <Card title="Use Priorities" icon="sort">
+    Set clear priority order. More specific rules should have lower priority numbers (higher precedence).
+  </Card>
+  <Card title="Monitor & Iterate" icon="chart-line">
+    Review analytics regularly and adjust policies based on actual usage patterns.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Analytics Guide" icon="chart-mixed" href="/guides/analytics">
+    Monitor how your policies are performing.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/policies/create">
+    Complete policy API documentation.
+  </Card>
+</CardGroup>
