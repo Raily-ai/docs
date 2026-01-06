@@ -3,11 +3,21 @@
   "theme": "mint",
   "name": "Raily",
   "colors": {
-    "primary": "#6366F1",
-    "light": "#818CF8",
-    "dark": "#4F46E5"
+    "primary": "#4F46E5",
+    "light": "#6366F1",
+    "dark": "#4338CA"
   },
   "favicon": "/favicon.svg",
+  "font": {
+    "headings": {
+      "family": "Rethink Sans",
+      "weight": 500
+    },
+    "body": {
+      "family": "Rethink Sans",
+      "weight": 400
+    }
+  },
   "navigation": {
     "tabs": [
       {
@@ -17,16 +27,35 @@
             "group": "Getting Started",
             "pages": [
               "index",
-              "quickstart",
-              "core-concepts"
+              "quickstart"
             ]
           },
           {
-            "group": "Content Management",
+            "group": "Connect Data to AI",
             "pages": [
-              "guides/content-ingestion",
-              "guides/access-policies",
-              "guides/analytics"
+              "connect/claude",
+              "connect/chatgpt",
+              "connect/sdk"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/ai-servers",
+              "concepts/identities-and-auth",
+              "concepts/discoverability"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/access",
+              "features/analytics",
+              "features/discoverability",
+              "features/authentication",
+              "features/data-storage",
+              "features/vector-store",
+              "features/mcp-servers"
             ]
           },
           {
@@ -34,92 +63,26 @@
             "pages": [
               "integrations/overview",
               "integrations/llm-providers",
-              "integrations/cms-platforms",
-              "integrations/webhooks"
-            ]
-          },
-          {
-            "group": "Use Cases",
-            "pages": [
-              "use-cases/publishers",
-              "use-cases/enterprises",
-              "use-cases/ai-applications"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API Reference",
-        "groups": [
-          {
-            "group": "Overview",
-            "pages": [
-              "api-reference/introduction",
-              "api-reference/authentication"
-            ]
-          },
-          {
-            "group": "Content",
-            "pages": [
-              "api-reference/content/list",
-              "api-reference/content/get",
-              "api-reference/content/create",
-              "api-reference/content/update",
-              "api-reference/content/delete"
-            ]
-          },
-          {
-            "group": "Policies",
-            "pages": [
-              "api-reference/policies/list",
-              "api-reference/policies/create",
-              "api-reference/policies/update"
-            ]
-          },
-          {
-            "group": "Analytics",
-            "pages": [
-              "api-reference/analytics/usage",
-              "api-reference/analytics/revenue"
-            ]
-          },
-          {
-            "group": "Webhooks",
-            "pages": [
-              "api-reference/webhooks/configure",
-              "api-reference/webhooks/events"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "SDKs",
-        "groups": [
-          {
-            "group": "SDKs",
-            "pages": [
-              "sdks/overview",
-              "sdks/javascript",
-              "sdks/python"
+              {
+                "group": "Storage",
+                "pages": [
+                  "integrations/storage/s3",
+                  "integrations/storage/raily-storage"
+                ]
+              },
+              {
+                "group": "Vector Store",
+                "pages": [
+                  "integrations/vector-store/qdrant",
+                  "integrations/vector-store/s3-vectors",
+                  "integrations/vector-store/raily-vector-store"
+                ]
+              }
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "API Reference",
-          "href": "/api-reference/introduction",
-          "icon": "code"
-        },
-        {
-          "anchor": "Status",
-          "href": "https://status.raily.ai",
-          "icon": "signal-bars"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
@@ -137,15 +100,6 @@
       "label": "Get Started",
       "href": "https://raily.ai/contact"
     }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "cursor"
-    ]
   },
   "footer": {
     "socials": {

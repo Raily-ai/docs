@@ -1,0 +1,75 @@
+---
+title: "Access Control"
+sidebarTitle: "Access"
+description: "Control who can access your content with powerful access policies"
+---
+
+## Overview
+
+Raily's access control system provides fine-grained control over who can access your content, under what conditions, and with what permissions. Every access request is evaluated against your policies in real-time.
+
+## How Access Works
+
+When an AI system or application requests access to your content:
+
+1. Request is sent to Raily with content ID and requester information
+2. Access policies are evaluated based on rules and conditions
+3. Decision is made to allow or deny access
+4. If allowed, a signed URL and access token are provided
+5. Content is accessed using the provided credentials
+
+## Access Policies
+
+Define rules that control access to your content based on:
+
+- **Requester identity** - Who is requesting access
+- **Purpose** - How the content will be used (inference, training, RAG, etc.)
+- **Time constraints** - When access is allowed
+- **License requirements** - Required licenses or subscriptions
+- **Rate limits** - Maximum requests per time period
+
+## Permissions
+
+Control what actions are allowed when access is granted:
+
+- Full access to complete content
+- Preview or metadata only
+- Commercial use rights
+- Training or fine-tuning permissions
+- Redistribution rights
+
+## Rate Limiting
+
+Set limits on how frequently content can be accessed:
+
+- Requests per hour, day, or month
+- Burst allowances for temporary spikes
+- Per-requester or global limits
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Default Deny" icon="shield-xmark">
+    Start with deny-by-default and explicitly allow access
+  </Card>
+  <Card title="Least Privilege" icon="key">
+    Grant minimum necessary permissions
+  </Card>
+  <Card title="Monitor Access" icon="eye">
+    Regularly review access logs for unusual patterns
+  </Card>
+  <Card title="Test Policies" icon="flask">
+    Test policies before deploying to production
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="shield-check" href="/features/authentication">
+    Learn about authentication methods
+  </Card>
+  <Card title="Analytics" icon="chart-line" href="/features/analytics">
+    Track access patterns and usage
+  </Card>
+</CardGroup>

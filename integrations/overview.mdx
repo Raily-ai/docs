@@ -6,20 +6,20 @@ description: "Connect Raily with your existing tools and platforms"
 
 ## Overview
 
-Raily integrates seamlessly with your existing infrastructure. Whether you're connecting to AI providers, syncing with your CMS, or building custom integrations, we've got you covered.
+Raily integrates seamlessly with your existing infrastructure. Whether you're connecting to AI providers, configuring storage, setting up vector databases, or building custom integrations, we've got you covered.
 
 <CardGroup cols={2}>
   <Card title="LLM Providers" icon="robot" href="/integrations/llm-providers">
     Connect with OpenAI, Anthropic, Google, and more
   </Card>
-  <Card title="CMS Platforms" icon="newspaper" href="/integrations/cms-platforms">
-    Sync content from WordPress, Contentful, Strapi
+  <Card title="Storage" icon="database" href="/integrations/storage/s3">
+    Store content in S3 or Raily's managed storage
   </Card>
-  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
-    Real-time event notifications
+  <Card title="Vector Store" icon="vector-square" href="/integrations/vector-store/qdrant">
+    Use Qdrant, S3 Vectors, or Raily's vector database
   </Card>
   <Card title="Analytics" icon="chart-line" href="/guides/analytics">
-    Export data to your analytics stack
+    Track usage and optimize your data delivery
   </Card>
 </CardGroup>
 
@@ -272,19 +272,79 @@ Common error codes:
 
 ---
 
+## Storage Options
+
+Raily supports multiple storage backends to fit your infrastructure:
+
+### Amazon S3
+Store your content in S3 buckets while Raily manages access control and analytics.
+
+```javascript
+await raily.storage.connect({
+  provider: 's3',
+  config: {
+    region: 'us-east-1',
+    bucket: 'your-content-bucket',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+});
+```
+
+### Raily Storage
+Use Raily's fully managed storage with zero configuration and global CDN.
+
+```javascript
+// No configuration needed - just upload
+await raily.content.create({
+  storage: { provider: "raily" },
+  file: fileBuffer
+});
+```
+
+---
+
+## Vector Store Options
+
+Enable semantic search and AI-powered retrieval:
+
+### Qdrant
+High-performance vector database for fast similarity search.
+
+### S3 Vectors
+Cost-effective vector storage using Amazon S3 for large-scale deployments.
+
+### Raily Vector Store
+Managed vector database with built-in access control and instant setup.
+
+```javascript
+// Index content with embeddings
+await raily.vectorStore.index({
+  contentId: "cnt_article_123",
+  vector: embedding,
+  metadata: { text: "..." }
+});
+
+// Semantic search with automatic access control
+const results = await raily.vectorStore.search({
+  vector: queryEmbedding,
+  requesterId: "app_id",
+  limit: 5
+});
+```
+
+---
+
 ## Next Steps
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="LLM Providers" icon="robot" href="/integrations/llm-providers">
-    Detailed integration guides for AI providers
+    Integrate with AI providers
   </Card>
-  <Card title="CMS Platforms" icon="newspaper" href="/integrations/cms-platforms">
-    Sync your existing content
+  <Card title="Storage" icon="database" href="/integrations/storage/s3">
+    Configure content storage
   </Card>
-  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
-    Set up real-time notifications
-  </Card>
-  <Card title="SDKs" icon="code" href="/sdks/overview">
-    Native library documentation
+  <Card title="Vector Store" icon="vector-square" href="/integrations/vector-store/qdrant">
+    Set up semantic search
   </Card>
 </CardGroup>

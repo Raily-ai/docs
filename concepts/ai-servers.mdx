@@ -1,0 +1,117 @@
+---
+title: "AI Servers"
+sidebarTitle: "AI Servers"
+description: "Expose your data collections in a trusted, authenticated, and transparent way to AI agents and applications"
+---
+
+## Overview
+
+AI Servers in Raily are endpoints that let you expose your data collections to AI agents and applications in a trusted, authenticated, and transparent way. Each AI Server is an endpoint configured with specific authentication and data integration settings.
+
+## What is an AI Server?
+
+An AI Server endpoint is configured with:
+
+- **Authentication** - Specific Identity Provider (IDP) for secure access
+- **Data Integration** - Specific data collection or integration you choose to expose
+- **Full Analytics** - Complete monitoring including latency, calls, and usage metrics
+
+Raily manages these endpoints and provides comprehensive analytics on their usage.
+
+## How AI Servers Work
+
+Each AI Server endpoint:
+
+1. **Authenticates requests** via your configured IDP
+2. **Serves data** from your chosen data collection or integration
+3. **Tracks all activity** with detailed analytics
+4. **Enforces access policies** based on your configuration
+
+## Endpoint Configuration
+
+An AI Server endpoint is configured with:
+
+### Identity Provider (IDP)
+
+Connect the AI Server to a specific IDP for authentication:
+
+- OAuth providers
+- API key authentication
+- Custom authentication systems
+- White-label authentication
+
+### Data Collection
+
+Choose which data collection or integration the endpoint exposes:
+
+- Specific content collections
+- Vector store data
+- External data integrations
+- Storage buckets
+
+## Analytics
+
+Raily provides full analytics for each AI Server endpoint, including:
+
+- **Total Calls** - Number of requests to the endpoint
+- **Average Response Time** - Latency metrics
+- **Total Input Tokens** - Tokens sent in requests
+- **Total Output Tokens** - Tokens returned in responses
+- **Average Input/Output Tokens** - Per-request averages
+- **Access patterns over time** - Timeline of usage
+
+Access analytics through the Raily dashboard at [app.raily.ai/dashboard](https://app.raily.ai/dashboard).
+
+## AI Server Types
+
+<CardGroup cols={2}>
+  <Card title="Agent Endpoints" icon="user-robot">
+    Endpoints for autonomous AI agents
+  </Card>
+  <Card title="Application Endpoints" icon="wand-magic-sparkles">
+    Endpoints for AI-powered applications
+  </Card>
+  <Card title="LLM Integration" icon="robot">
+    Endpoints for LLM provider access
+  </Card>
+  <Card title="Custom Endpoints" icon="plug">
+    Endpoints for custom integrations
+  </Card>
+</CardGroup>
+
+## Trusted and Transparent
+
+AI Server endpoints provide:
+
+- **Trust** - Authentication on every request
+- **Transparency** - Full visibility into who accesses what
+- **Control** - Configure exactly what data is exposed
+- **Analytics** - Detailed metrics on all usage
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Separate Endpoints" icon="code-branch">
+    Create separate AI Server endpoints for different use cases and environments
+  </Card>
+  <Card title="Monitor Analytics" icon="chart-line">
+    Regularly review endpoint analytics to understand usage patterns
+  </Card>
+  <Card title="Secure Authentication" icon="shield-check">
+    Use robust IDP configuration for endpoint authentication
+  </Card>
+  <Card title="Access Policies" icon="lock">
+    Configure appropriate access policies for each endpoint
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Identities and Auth" icon="shield-check" href="/concepts/identities-and-auth">
+    Learn about authentication and authorization
+  </Card>
+  <Card title="Analytics" icon="chart-line" href="/features/analytics">
+    View endpoint analytics and metrics
+  </Card>
+</CardGroup>

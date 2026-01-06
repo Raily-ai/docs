@@ -1,0 +1,84 @@
+---
+title: "Authentication"
+sidebarTitle: "Authentication"
+description: "Secure authentication for AI servers and applications accessing your content"
+---
+
+## Overview
+
+Raily provides multiple authentication methods to secure access to your content. Choose the method that best fits your infrastructure and security requirements.
+
+## Authentication Methods
+
+<CardGroup cols={3}>
+  <Card title="API Keys" icon="key">
+    Simple, secure authentication for programmatic access
+  </Card>
+  <Card title="OAuth 2.0" icon="lock">
+    Standard authentication for user-facing applications
+  </Card>
+  <Card title="White Label" icon="shield-check">
+    Use your existing authentication system
+  </Card>
+</CardGroup>
+
+## API Key Authentication
+
+The primary authentication method for server-to-server communication. API keys provide simple, secure authentication for accessing your content programmatically.
+
+### Managing API Keys
+
+- Create new API keys with specific scopes
+- Set expiration dates for enhanced security
+- List and manage all active API keys
+- Revoke keys when needed
+
+## OAuth 2.0
+
+OAuth 2.0 provides standard authentication for user-facing applications. Configure OAuth settings, exchange authorization codes for access tokens, and securely authenticate user requests.
+
+## White Label Authentication
+
+Integrate your existing authentication system with Raily. Configure custom authentication providers, use your own JWT tokens, and maintain your existing user management infrastructure.
+
+## Token Management
+
+### Access Tokens
+
+Generate short-lived access tokens for secure, temporary access to resources.
+
+### Refresh Tokens
+
+Use refresh tokens to obtain new access tokens without requiring re-authentication.
+
+## Multi-Factor Authentication
+
+Add an extra security layer with multi-factor authentication (MFA). Support for time-based one-time passwords (TOTP) and backup codes.
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Secure Storage" icon="vault">
+    Store credentials in environment variables or secret managers
+  </Card>
+  <Card title="Regular Rotation" icon="rotate">
+    Rotate API keys and tokens regularly
+  </Card>
+  <Card title="Scope Limitation" icon="sliders">
+    Grant minimum necessary scopes
+  </Card>
+  <Card title="Monitor Usage" icon="chart-line">
+    Track authentication events and failures
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Access Control" icon="shield-check" href="/features/access">
+    Configure access policies
+  </Card>
+  <Card title="Analytics" icon="chart-line" href="/features/analytics">
+    Monitor authentication activity
+  </Card>
+</CardGroup>

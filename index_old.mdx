@@ -1,0 +1,129 @@
+---
+title: "Welcome to Raily"
+sidebarTitle: "Introduction"
+description: "The AI-Ready Content Access Layer that transforms your content infrastructure for the AI era"
+---
+
+<Frame>
+  <div style={{background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 50%, #7C3AED 100%)', padding: '48px 32px', borderRadius: '12px', textAlign: 'center'}}>
+    <h1 style={{color: 'white', fontSize: '2.5rem', fontWeight: '700', marginBottom: '16px'}}>Content Made for AI</h1>
+    <p style={{color: 'rgba(255,255,255,0.9)', fontSize: '1.25rem', maxWidth: '600px', margin: '0 auto 24px'}}>
+      The AI-Ready Content Access Layer. Monetize your premium content and IP in the GenAI era.
+    </p>
+    <div style={{display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap'}}>
+      <a href="/quickstart" style={{background: 'white', color: '#4F46E5', padding: '12px 24px', borderRadius: '8px', fontWeight: '600', textDecoration: 'none'}}>Get Started</a>
+      <a href="https://raily.ai/contact" style={{background: 'rgba(255,255,255,0.15)', color: 'white', padding: '12px 24px', borderRadius: '8px', fontWeight: '600', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)'}}>Contact Sales</a>
+    </div>
+  </div>
+</Frame>
+
+## What is Raily?
+
+Raily is the **AI-Ready Content Access Layer** that helps publishers, enterprises, and content creators monetize their premium content and intellectual property in the GenAI era. We connect your data and IP to AI systems while ensuring you maintain control, visibility, and revenue.
+
+<CardGroup cols={2}>
+  <Card title="Secure Access Control" icon="shield-check">
+    Define who can access your content, when, and under what conditions. Fine-grained policies give you complete control.
+  </Card>
+  <Card title="Advanced Analytics" icon="chart-mixed">
+    Track how AI systems consume your content in real-time. Understand usage patterns and optimize your strategy.
+  </Card>
+  <Card title="Intelligent Policies" icon="brain">
+    Create sophisticated access rules that adapt to context, usage patterns, and commercial agreements.
+  </Card>
+  <Card title="Revenue Optimization" icon="money-bill-trend-up">
+    Turn your content into a scalable revenue stream with flexible licensing and usage-based billing.
+  </Card>
+</CardGroup>
+
+## Get Started in Minutes
+
+<Steps>
+  <Step title="Create Your Account">
+    Sign up at [raily.ai](https://raily.ai/contact) to get your API keys and access the dashboard.
+  </Step>
+  <Step title="Connect Your Content">
+    Integrate your content sources using our SDKs or REST API. We support all major CMS platforms.
+    ```bash
+    npm install @raily/sdk
+    ```
+  </Step>
+  <Step title="Define Access Policies">
+    Set up policies to control how AI systems can access and use your content.
+    ```javascript
+    const policy = await raily.policies.create({
+      name: "Premium Content Access",
+      rules: [
+        { action: "allow", conditions: { hasLicense: true } },
+        { action: "deny", conditions: { default: true } }
+      ]
+    });
+    ```
+  </Step>
+  <Step title="Start Earning">
+    Monitor usage through the dashboard and watch as your content generates revenue.
+  </Step>
+</Steps>
+
+## Why Choose Raily?
+
+<AccordionGroup>
+  <Accordion title="Built for the AI Era" icon="robot">
+    Unlike traditional content management systems, Raily is designed from the ground up for AI consumption. We understand how LLMs and AI applications access content, and we've optimized every aspect of our platform for this new paradigm.
+  </Accordion>
+
+  <Accordion title="Enterprise-Grade Security" icon="lock">
+    Your content is your most valuable asset. Raily provides bank-grade encryption, SOC 2 compliance, and detailed audit logs. You always know who accessed what, when, and why.
+  </Accordion>
+
+  <Accordion title="Flexible Integration" icon="plug">
+    Whether you use WordPress, custom CMS, or direct API integration, Raily works with your existing infrastructure. Our SDKs for JavaScript and Python make integration a breeze.
+  </Accordion>
+
+  <Accordion title="Real-Time Insights" icon="gauge-high">
+    Don't fly blind. Our analytics dashboard shows you exactly how AI systems are using your content, which pieces are most valuable, and where your revenue is coming from.
+  </Accordion>
+</AccordionGroup>
+
+## Explore the Documentation
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart Guide"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get up and running with Raily in under 10 minutes.
+  </Card>
+  <Card
+    title="Core Concepts"
+    icon="book"
+    href="/core-concepts"
+  >
+    Understand the key concepts behind Raily's architecture.
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api-reference/introduction"
+  >
+    Complete API documentation with examples.
+  </Card>
+  <Card
+    title="Use Cases"
+    icon="lightbulb"
+    href="/use-cases/publishers"
+  >
+    See how others are using Raily to monetize content.
+  </Card>
+</CardGroup>
+
+## Need Help?
+
+<Card
+  title="Contact Us"
+  icon="envelope"
+  href="https://raily.ai/contact"
+>
+  Our team is here to help you get started. Reach out for personalized guidance on implementing Raily for your use case.
+</Card>

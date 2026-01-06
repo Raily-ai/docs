@@ -1,0 +1,135 @@
+---
+title: "Raily Storage"
+sidebarTitle: "Raily Storage"
+description: "Use Raily's managed storage for your content"
+---
+
+## Overview
+
+Raily Storage is a fully managed storage solution that provides instant setup with built-in access control, analytics, and monetization. No external storage configuration required.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Zero Configuration" icon="bolt">
+    Start storing content immediately without setting up external storage.
+  </Card>
+  <Card title="Global CDN" icon="globe">
+    Content delivered through a global CDN for fast access worldwide.
+  </Card>
+  <Card title="Automatic Backups" icon="floppy-disk">
+    Regular backups with point-in-time recovery included.
+  </Card>
+  <Card title="Integrated Analytics" icon="chart-line">
+    Built-in tracking and analytics for all content access.
+  </Card>
+</CardGroup>
+
+## Uploading Content
+
+```javascript
+import Raily from '@raily/sdk';
+
+const raily = new Raily({
+  apiKey: process.env.RAILY_API_KEY
+});
+
+// Upload content to Raily Storage
+const content = await raily.content.create({
+  title: "Premium Article",
+  type: "article",
+  storage: {
+    provider: "raily"
+  },
+  file: fileBuffer,
+  metadata: {
+    category: "premium",
+    tags: ["ai", "technology"]
+  }
+});
+
+console.log(`Content uploaded: ${content.id}`);
+```
+
+## Accessing Content
+
+```javascript
+// Access content with built-in authorization
+const access = await raily.access.check({
+  contentId: "cnt_article_123",
+  requesterId: "app_id",
+  context: {
+    purpose: "inference"
+  }
+});
+
+if (access.allowed) {
+  // Direct access to Raily-hosted content
+  const response = await fetch(access.contentUrl, {
+    headers: {
+      Authorization: `Bearer ${access.token}`
+    }
+  });
+
+  const content = await response.text();
+}
+```
+
+## Bulk Upload
+
+```javascript
+// Upload multiple files at once
+const files = [
+  { title: "Article 1", file: file1 },
+  { title: "Article 2", file: file2 },
+  { title: "Article 3", file: file3 }
+];
+
+const results = await raily.content.bulkCreate({
+  storage: { provider: "raily" },
+  files: files.map(f => ({
+    title: f.title,
+    file: f.file,
+    metadata: { uploadedAt: new Date() }
+  }))
+});
+
+console.log(`Uploaded ${results.length} files`);
+```
+
+## Storage Limits
+
+| Plan | Storage Limit | Bandwidth | CDN |
+|------|--------------|-----------|-----|
+| Free | 1 GB | 10 GB/month | Yes |
+| Pro | 100 GB | 1 TB/month | Yes |
+| Enterprise | Custom | Unlimited | Yes |
+
+## Migration
+
+### From S3 to Raily Storage
+
+```javascript
+// Migrate existing S3 content to Raily Storage
+const s3Content = await raily.content.list({
+  storage: { provider: "s3" }
+});
+
+for (const item of s3Content.items) {
+  await raily.content.migrate({
+    contentId: item.id,
+    to: { provider: "raily" }
+  });
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="S3 Storage" icon="aws" href="/integrations/storage/s3">
+    Use Amazon S3 for storage
+  </Card>
+  <Card title="Content Ingestion" icon="upload" href="/guides/content-ingestion">
+    Learn more about content management
+  </Card>
+</CardGroup>

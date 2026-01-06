@@ -1,0 +1,245 @@
+---
+title: "S3 Vector Storage"
+sidebarTitle: "S3 Vectors"
+description: "Store and retrieve vector embeddings using Amazon S3"
+---
+
+## Overview
+
+Use Amazon S3 to store vector embeddings with Raily's access control and tracking. This approach is cost-effective for large-scale vector storage and works well with batch retrieval patterns.
+
+## Setup
+
+```javascript
+import Raily from '@raily/sdk';
+
+const raily = new Raily({
+  apiKey: process.env.RAILY_API_KEY
+});
+
+// Configure S3 for vector storage
+await raily.vectorStore.connect({
+  provider: 's3-vectors',
+  config: {
+    region: 'us-east-1',
+    bucket: 'your-vectors-bucket',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+});
+```
+
+## Storing Vectors
+
+```javascript
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
+
+// Generate and store embeddings in S3
+async function storeEmbedding(contentId, text) {
+  // Generate embedding
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: text
+  });
+
+  // Store in S3 via Raily
+  await raily.vectorStore.upload({
+    provider: 's3-vectors',
+    key: `embeddings/${contentId}.json`,
+    data: {
+      contentId: contentId,
+      vector: embedding.data[0].embedding,
+      text: text,
+      metadata: {
+        model: "text-embedding-ada-002",
+        created_at: new Date().toISOString()
+      }
+    }
+  });
+}
+```
+
+## Retrieving Vectors
+
+```javascript
+// Load embeddings from S3
+async function loadEmbedding(contentId, requesterId) {
+  // Check access
+  const access = await raily.access.check({
+    contentId: contentId,
+    requesterId: requesterId,
+    context: { purpose: "vector_retrieval" }
+  });
+
+  if (!access.allowed) {
+    throw new Error(`Access denied: ${access.reason}`);
+  }
+
+  // Download from S3
+  const embedding = await raily.vectorStore.download({
+    provider: 's3-vectors',
+    key: `embeddings/${contentId}.json`
+  });
+
+  return embedding;
+}
+```
+
+## Batch Processing
+
+```javascript
+// Store multiple embeddings efficiently
+async function batchStoreEmbeddings(documents) {
+  const embeddings = [];
+
+  // Generate embeddings in batches
+  for (let i = 0; i < documents.length; i += 100) {
+    const batch = documents.slice(i, i + 100);
+
+    const batchEmbeddings = await openai.embeddings.create({
+      model: "text-embedding-ada-002",
+      input: batch.map(doc => doc.text)
+    });
+
+    embeddings.push(...batchEmbeddings.data);
+  }
+
+  // Upload to S3
+  const uploads = documents.map((doc, index) => ({
+    key: `embeddings/${doc.id}.json`,
+    data: {
+      contentId: doc.id,
+      vector: embeddings[index].embedding,
+      text: doc.text
+    }
+  }));
+
+  await raily.vectorStore.batchUpload({
+    provider: 's3-vectors',
+    uploads: uploads
+  });
+
+  console.log(`Stored ${uploads.length} embeddings`);
+}
+```
+
+## Search Implementation
+
+```javascript
+// Simple cosine similarity search
+function cosineSimilarity(a, b) {
+  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+  const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+  const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+  return dotProduct / (magnitudeA * magnitudeB);
+}
+
+async function searchVectors(query, contentIds, requesterId, topK = 5) {
+  // Generate query embedding
+  const queryEmbedding = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: query
+  });
+
+  const results = [];
+
+  // Load and score embeddings
+  for (const contentId of contentIds) {
+    try {
+      const embedding = await loadEmbedding(contentId, requesterId);
+
+      const similarity = cosineSimilarity(
+        queryEmbedding.data[0].embedding,
+        embedding.vector
+      );
+
+      results.push({
+        contentId: contentId,
+        text: embedding.text,
+        score: similarity
+      });
+    } catch (error) {
+      // Access denied or not found - skip
+      continue;
+    }
+  }
+
+  // Sort and return top K
+  return results
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
+}
+```
+
+## Storage Optimization
+
+```javascript
+// Compress vectors before storing
+import { gzip, gunzip } from 'zlib';
+import { promisify } from 'util';
+
+const gzipAsync = promisify(gzip);
+const gunzipAsync = promisify(gunzip);
+
+async function storeCompressedEmbedding(contentId, vector, text) {
+  const data = JSON.stringify({ vector, text });
+  const compressed = await gzipAsync(Buffer.from(data));
+
+  await raily.vectorStore.upload({
+    provider: 's3-vectors',
+    key: `embeddings/${contentId}.json.gz`,
+    data: compressed,
+    contentEncoding: 'gzip'
+  });
+}
+
+async function loadCompressedEmbedding(contentId, requesterId) {
+  const access = await raily.access.check({
+    contentId: contentId,
+    requesterId: requesterId,
+    context: { purpose: "vector_retrieval" }
+  });
+
+  if (!access.allowed) {
+    throw new Error(`Access denied`);
+  }
+
+  const compressed = await raily.vectorStore.download({
+    provider: 's3-vectors',
+    key: `embeddings/${contentId}.json.gz`
+  });
+
+  const decompressed = await gunzipAsync(compressed);
+  return JSON.parse(decompressed.toString());
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Compression" icon="file-zipper">
+    Use gzip compression to reduce storage costs and transfer time.
+  </Card>
+  <Card title="Batching" icon="layer-group">
+    Process embeddings in batches to reduce API calls and improve performance.
+  </Card>
+  <Card title="Caching" icon="database">
+    Cache frequently accessed vectors in memory or a fast database.
+  </Card>
+  <Card title="Partitioning" icon="folder-tree">
+    Organize vectors by type, date, or category using S3 key prefixes.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Qdrant" icon="database" href="/integrations/vector-store/qdrant">
+    Use Qdrant for faster vector search
+  </Card>
+  <Card title="Raily Vector Store" icon="bolt" href="/integrations/vector-store/raily-vector-store">
+    Use Raily's managed vector store
+  </Card>
+</CardGroup>

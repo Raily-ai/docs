@@ -1,0 +1,220 @@
+---
+title: "Qdrant Vector Store"
+sidebarTitle: "Qdrant"
+description: "Integrate Raily with Qdrant for vector search and semantic retrieval"
+---
+
+## Overview
+
+Connect Raily with Qdrant to enable semantic search and vector-based retrieval while maintaining access control and usage tracking on your embeddings and content.
+
+## Setup
+
+### Prerequisites
+
+- Qdrant instance (cloud or self-hosted)
+- Qdrant API key (for cloud)
+- Collection created in Qdrant
+
+### Configuration
+
+```javascript
+import Raily from '@raily/sdk';
+import { QdrantClient } from '@qdrant/js-client-rest';
+
+const raily = new Raily({
+  apiKey: process.env.RAILY_API_KEY
+});
+
+const qdrant = new QdrantClient({
+  url: process.env.QDRANT_URL,
+  apiKey: process.env.QDRANT_API_KEY
+});
+
+// Connect Qdrant to Raily
+await raily.vectorStore.connect({
+  provider: 'qdrant',
+  config: {
+    url: process.env.QDRANT_URL,
+    apiKey: process.env.QDRANT_API_KEY,
+    collection: 'content_embeddings'
+  }
+});
+```
+
+## Indexing Content
+
+```javascript
+import OpenAI from 'openai';
+
+const openai = new OpenAI();
+
+// Create embeddings and store in Qdrant via Raily
+async function indexContent(contentId, text) {
+  // Generate embedding
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: text
+  });
+
+  // Store in Qdrant with Raily tracking
+  await raily.vectorStore.upsert({
+    provider: 'qdrant',
+    collection: 'content_embeddings',
+    points: [{
+      id: contentId,
+      vector: embedding.data[0].embedding,
+      payload: {
+        contentId: contentId,
+        text: text,
+        indexed_at: new Date().toISOString()
+      }
+    }]
+  });
+}
+```
+
+## Semantic Search with Access Control
+
+```javascript
+async function semanticSearch(query, requesterId, topK = 5) {
+  // Generate query embedding
+  const queryEmbedding = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: query
+  });
+
+  // Search in Qdrant
+  const searchResults = await qdrant.search('content_embeddings', {
+    vector: queryEmbedding.data[0].embedding,
+    limit: topK * 2 // Get extra results for filtering
+  });
+
+  // Filter by access control
+  const authorizedResults = [];
+
+  for (const result of searchResults) {
+    const access = await raily.access.check({
+      contentId: result.payload.contentId,
+      requesterId: requesterId,
+      context: {
+        purpose: "semantic_search",
+        query: query
+      }
+    });
+
+    if (access.allowed) {
+      authorizedResults.push({
+        contentId: result.payload.contentId,
+        text: result.payload.text,
+        score: result.score
+      });
+    }
+
+    if (authorizedResults.length >= topK) break;
+  }
+
+  return authorizedResults;
+}
+```
+
+## RAG with Qdrant and Raily
+
+```javascript
+async function ragWithQdrant(userQuery, requesterId) {
+  // Step 1: Semantic search with access control
+  const relevantDocs = await semanticSearch(userQuery, requesterId, 3);
+
+  if (relevantDocs.length === 0) {
+    return "I don't have access to relevant information to answer your question.";
+  }
+
+  // Step 2: Construct context from authorized documents
+  const context = relevantDocs
+    .map((doc, i) => `[${i + 1}] ${doc.text}`)
+    .join('\n\n');
+
+  // Step 3: Query LLM with context
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      {
+        role: "system",
+        content: `Answer questions based on the following context:\n\n${context}`
+      },
+      {
+        role: "user",
+        content: userQuery
+      }
+    ]
+  });
+
+  return {
+    answer: completion.choices[0].message.content,
+    sources: relevantDocs.map(doc => doc.contentId)
+  };
+}
+```
+
+## Batch Indexing
+
+```javascript
+async function batchIndexContent(documents) {
+  const points = [];
+
+  for (const doc of documents) {
+    // Generate embedding
+    const embedding = await openai.embeddings.create({
+      model: "text-embedding-ada-002",
+      input: doc.text
+    });
+
+    points.push({
+      id: doc.id,
+      vector: embedding.data[0].embedding,
+      payload: {
+        contentId: doc.id,
+        text: doc.text,
+        metadata: doc.metadata
+      }
+    });
+  }
+
+  // Batch upsert to Qdrant
+  await raily.vectorStore.upsert({
+    provider: 'qdrant',
+    collection: 'content_embeddings',
+    points: points
+  });
+
+  console.log(`Indexed ${points.length} documents`);
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Collection Design" icon="sitemap">
+    Design collections based on content types and access patterns for optimal performance.
+  </Card>
+  <Card title="Batch Operations" icon="layer-group">
+    Use batch operations for indexing multiple documents to improve performance.
+  </Card>
+  <Card title="Payload Optimization" icon="gauge">
+    Store only necessary metadata in payloads to reduce memory usage.
+  </Card>
+  <Card title="Access Caching" icon="clock">
+    Cache access decisions for frequently accessed content to reduce latency.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="S3 Vectors" icon="aws" href="/integrations/vector-store/s3-vectors">
+    Store vectors in Amazon S3
+  </Card>
+  <Card title="Raily Vector Store" icon="database" href="/integrations/vector-store/raily-vector-store">
+    Use Raily's managed vector store
+  </Card>
+</CardGroup>
